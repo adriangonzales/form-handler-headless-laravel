@@ -20,8 +20,8 @@ return RectorConfig::configure()
         NewlineAfterStatementRector::class,
     ])
     ->withPaths([
-        __DIR__ . '/app',
-        __DIR__ . '/database',
-        __DIR__ . '/tests',
+        __DIR__.'/app',
+        __DIR__.'/database',
+        __DIR__.'/tests',
     ])
     ->withTypeCoverageLevel(0);

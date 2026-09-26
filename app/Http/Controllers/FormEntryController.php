@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\FormEntryCreated;
 use App\Http\Requests\FormEntryStoreRequest;
 use App\Http\Requests\FormEntryUpdateRequest;
 use App\Http\Resources\FormEntryCollection;
@@ -39,7 +40,7 @@ class FormEntryController extends Controller
             'spam_score' => 0, // TODO: Add catpcha service step
         ]);
 
-        event(new \App\Events\FormEntryCreated($formEntry));
+        event(new FormEntryCreated($formEntry));
 
         // $form->user->notify(new NewFormEntry($formEntry));
         // Mail::to($form->user)->send(new NewFormEntry($formEntry));

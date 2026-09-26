@@ -3,18 +3,10 @@
 namespace Tests\Feature\Http\Controllers;
 
 use App\Events\FormEntryCreated;
-use App\Mail\NewFormEntry;
 use App\Models\Form;
 use App\Models\FormEntry;
 use App\Models\User;
-use App\Notification\NewFormEntry as NewFormEntryNotification;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Notification;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
 beforeEach(function (): void {
     $this->user = User::factory()->create();
@@ -105,18 +97,18 @@ it('creates a new form entry', function (): void {
 
     $response->assertCreated();
     $response->assertJson([
-        "form_id" => $this->form->id,
-        "data" => [],
-        "ip" => "127.0.0.1",
-        "ip_location_display" => null,
-        "referer" => null,
-        "user_agent" => "Symfony",
-        "user_agent_display" => null,
-        "spam" => false,
-        "spam_score" => "0.00",
-        "spam_reason" => null,
-        "starred" => false,
-        "read_at" => null,
+        'form_id' => $this->form->id,
+        'data' => [],
+        'ip' => '127.0.0.1',
+        'ip_location_display' => null,
+        'referer' => null,
+        'user_agent' => 'Symfony',
+        'user_agent_display' => null,
+        'spam' => false,
+        'spam_score' => '0.00',
+        'spam_reason' => null,
+        'starred' => false,
+        'read_at' => null,
     ]);
 
     $formEntries = $this->form->entries()

@@ -26,6 +26,6 @@ class FormEntryStoreRequest extends FormRequest
         /** @param Form **/
         $form = $this->route('form');
 
-        return (new BuildValidationRules())($form);
+        return (new BuildValidationRules)($form);
     }
 }

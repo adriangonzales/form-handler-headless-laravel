@@ -5,11 +5,6 @@ namespace Tests\Feature\Http\Controllers;
 use App\Models\Form;
 use App\Models\FormNotification;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use JMac\Testing\Traits\AdditionalAssertions;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
 beforeEach(function (): void {
     $this->user = User::factory()->create();
@@ -70,7 +65,7 @@ it('shows single form notification', function (): void {
             'value',
             'enabled',
             'error',
-        ]
+        ],
     ]);
 });
 
@@ -93,7 +88,7 @@ it('creates a new form notification', function (): void {
             'value' => $value,
             'enabled' => true,
             'error' => null,
-        ]
+        ],
     ]);
 
     $formNotifications = $this->form->notifications()

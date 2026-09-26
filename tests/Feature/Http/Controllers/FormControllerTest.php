@@ -33,7 +33,7 @@ it('lists results from the index', function (): void {
                 'active',
                 'schema',
                 'settings',
-            ]
+            ],
         ],
         'links' => [
             'first',
@@ -121,7 +121,7 @@ it('updates a form', function (): void {
             'user_id' => $user->id,
             'name' => $name,
             'active' => $active,
-        ]
+        ],
     ]);
 
     $form->refresh();

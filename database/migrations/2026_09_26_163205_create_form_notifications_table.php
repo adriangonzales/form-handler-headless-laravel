@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('form_notifications', function (Blueprint $table): void {
             $table->ulid('id')->primary();
             $table->foreignUlid('form_id')->constrained();
-            $table->enum('type', ["email", "sms"]);
+            $table->enum('type', ['email', 'sms']);
             $table->string('value');
             $table->boolean('enabled')->default(true);
             $table->string('error')->nullable();
