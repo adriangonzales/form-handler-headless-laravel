@@ -36,6 +36,7 @@ class User extends Authenticatable implements PasskeyUser
     use Notifiable;
     use PasskeyAuthenticatable;
     use TwoFactorAuthenticatable;
+
     /**
      * Get the attributes that should be cast.
      *

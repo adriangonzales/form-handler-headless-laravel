@@ -1,0 +1,43 @@
+created:
+    - app/Http/Controllers/FormController.php
+    - app/Http/Controllers/FormEntryController.php
+    - app/Http/Controllers/FormNotificationController.php
+    - database/factories/FormFactory.php
+    - database/factories/FormEntryFactory.php
+    - database/factories/FormNotificationFactory.php
+    - database/migrations/2026_09_26_163203_create_forms_table.php
+    - database/migrations/2026_09_26_163204_create_form_entries_table.php
+    - database/migrations/2026_09_26_163205_create_form_notifications_table.php
+    - app/Models/Form.php
+    - app/Models/FormEntry.php
+    - app/Models/FormNotification.php
+    - database/seeders/FormSeeder.php
+    - database/seeders/FormEntrySeeder.php
+    - database/seeders/FormNotificationSeeder.php
+    - tests/Feature/Http/Controllers/FormControllerTest.php
+    - tests/Feature/Http/Controllers/FormEntryControllerTest.php
+    - tests/Feature/Http/Controllers/FormNotificationControllerTest.php
+    - app/Events/FormCreated.php
+    - app/Events/FormEntryCreated.php
+    - app/Http/Requests/FormStoreRequest.php
+    - app/Http/Requests/FormUpdateRequest.php
+    - app/Http/Requests/FormEntryStoreRequest.php
+    - app/Http/Requests/FormEntryUpdateRequest.php
+    - app/Http/Requests/FormNotificationStoreRequest.php
+    - app/Http/Requests/FormNotificationUpdateRequest.php
+    - app/Mail/NewFormEntry.php
+    - resources/views/emails/new-form-entry.blade.php
+    - app/Notification/NewFormEntry.php
+    - app/Http/Resources/FormCollection.php
+    - app/Http/Resources/FormResource.php
+    - app/Http/Resources/FormEntryCollection.php
+    - app/Http/Resources/FormEntryResource.php
+    - app/Http/Resources/FormNotificationCollection.php
+    - app/Http/Resources/FormNotificationResource.php
+updated:
+    - routes/web.php
+models:
+    User: { name: string, email: string, email_verified_at: 'datetime nullable', password: string, remember_token: 'string nullable', two_factor_secret: 'text nullable', two_factor_recovery_codes: 'text nullable', two_factor_confirmed_at: 'datetime nullable' }
+    Form: { id: ulid, user_id: 'foreign:users.id', name: 'string:400', active: 'boolean default:false', schema: 'json nullable', settings: 'json nullable', timestamps: timestamps, softdeletes: softDeletes }
+    FormEntry: { id: ulid, form_id: 'foreign:forms.id', data: 'json nullable', ip: 'string nullable', ip_location_display: 'string nullable', referer: 'string nullable', user_agent: 'string nullable', user_agent_display: 'string nullable', spam: 'boolean nullable', spam_score: 'decimal default:0', spam_reason: 'string nullable', starred: 'boolean default:false', read_at: 'timestamp nullable', timestamps: timestamps, softdeletes: softDeletes }
+    FormNotification: { id: ulid, form_id: 'foreign:forms.id', type: 'enum:email,sms', value: string, enabled: 'boolean default:true', error: 'string nullable', timestamps: timestamps, softdeletes: softDeletes }

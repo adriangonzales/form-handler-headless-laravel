@@ -1,0 +1,90 @@
+models:
+    Form:
+        id: ulid
+        user_id: foreign:users.id
+        name: string:400
+        active: boolean default:false
+        schema: json nullable
+        settings: json nullable
+        timestamps: true
+        softDeletes: true
+
+    FormEntry:
+        id: ulid
+        form_id: foreign:forms.id
+        data: json nullable
+        ip: string nullable
+        ip_location_display: string nullable
+        referer: string nullable
+        user_agent: string nullable
+        user_agent_display: string nullable
+        spam: boolean nullable
+        spam_score: decimal default:0
+        spam_reason: string nullable
+        starred: boolean default:false
+        read_at: timestamp nullable
+        timestamps: true
+        softDeletes: true
+
+    FormNotification:
+        id: ulid
+        form_id: foreign:forms.id
+        type: enum:email,sms
+        value: string
+        enabled: boolean default:true
+        error: string nullable
+        timestamps: true
+        softDeletes: true
+
+seeders: Form, FormEntry, FormNotification
+
+controllers:
+    Form:
+        index:
+            query: order:created_at limit:10
+            resource: paginate:forms
+        show:
+            find: form.id
+        store:
+            validate: name, schema, settings
+            save: form
+            fire: FormCreated with:form
+            resource: form
+        update:
+            validate: form
+            update: form
+            flash: form.id
+
+    FormEntry:
+        index:
+            query: order:created_at limit:10
+            resource: paginate:form-entries
+        show:
+            find: formEntry.id
+        store:
+            validate: formId, data
+            save: formEntry
+            fire: FormEntryCreated with:formEntry
+            notify: form.user NewFormEntry
+            send: NewFormEntry to:form.user with:formEntry
+            resource: form-entry
+        update:
+            validate: formEntry
+            update: formEntry
+            flash: form_entry.id
+
+    FormNotification:
+        index:
+            query: all
+            resource: paginate:form-notifications
+        show:
+            find: formNotification.id
+        store:
+            validate: type, value
+            save: form
+            return: FormNotificationResource
+            resource: form-notification
+        update:
+            validate: formNotification
+            update: formNotification
+            flash: formNotification.id
