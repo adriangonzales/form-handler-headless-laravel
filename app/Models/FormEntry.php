@@ -38,11 +38,22 @@ class FormEntry extends Model
         return [
             'data' => 'array',
             'spam' => 'boolean',
-            'spam_score' => 'decimal',
+            'spam_score' => 'decimal:2',
             'starred' => 'boolean',
             'read_at' => 'timestamp',
         ];
     }
+
+    /**
+     * The model's default values for attributes.
+     *
+     * @var array
+     */
+    protected $attributes = [
+        'spam' => false,
+        'spam_score' => 0,
+        'starred' => 0,
+    ];
 
     public function form(): BelongsTo
     {

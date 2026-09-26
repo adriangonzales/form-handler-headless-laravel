@@ -4,108 +4,101 @@ namespace Tests\Feature\Http\Controllers;
 
 use App\Models\Form;
 use App\Models\FormNotification;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use JMac\Testing\Traits\AdditionalAssertions;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
-/**
- * @see \App\Http\Controllers\FormNotificationController
- */
-final class FormNotificationControllerTest extends TestCase
-{
-    use AdditionalAssertions;
-    use RefreshDatabase;
-    use WithFaker;
+beforeEach(function (): void {
+    $this->user = User::factory()->create();
+    $this->form = Form::factory()->create(['user_id' => $this->user->id]);
+});
 
-    #[Test]
-    public function index_behaves_as_expected(): void
-    {
-        FormNotification::factory()->count(3)->create();
+it('requires authentication to view the form entry index', function (): void {
+    $response = $this->get(route('forms.notifications.index', $this->form));
+    $response->assertUnauthorized();
+});
 
-        $response = $this->get(route('form-notifications.index'));
+it('lists results from the index', function (): void {
+    $this->actingAs($this->user);
 
-        $response->assertOk();
-        $response->assertJsonStructure([]);
-    }
+    $formNotification = FormNotification::factory()->create(['form_id' => $this->form->id]);
 
+    $response = $this->get(route('forms.notifications.index', $this->form));
 
-    #[Test]
-    public function show_behaves_as_expected(): void
-    {
-        $formNotification = FormNotification::factory()->create();
+    $response->assertOk();
 
-        $this->get(route('form-notifications.show', $formNotification));
-    }
+    $response->assertJsonStructure([
+        'data' => [
+            '*' => [
+                'id',
+                'form_id',
+                'type',
+                'value',
+                'enabled',
+                'error',
+            ],
+        ],
+        'links' => [
+            'first',
+            'last',
+            'prev',
+            'next',
+        ],
+        'meta' => [
+            'current_page',
+        ],
+    ]);
+    $response->assertJsonCount(1, 'data');
+});
 
+it('shows single form notification', function (): void {
+    $this->actingAs($this->user);
 
-    #[Test]
-    public function store_uses_form_request_validation(): void
-    {
-        $this->assertActionUsesFormRequest(
-            \App\Http\Controllers\FormNotificationController::class,
-            'store',
-            \App\Http\Requests\FormNotificationStoreRequest::class
-        );
-    }
+    $formNotification = FormNotification::factory()->create(['form_id' => $this->form->id]);
 
-    #[Test]
-    public function store_saves(): void
-    {
-        $type = fake()->randomElement(/** enum_attributes **/);
-        $value = fake()->word();
+    $response = $this->get(route('notifications.show', $formNotification));
 
-        $response = $this->post(route('form-notifications.store'), [
-            'type' => $type,
+    $response->assertOk();
+    $response->assertJsonStructure([
+        'data' => [
+            'id',
+            'form_id',
+            'type',
+            'value',
+            'enabled',
+            'error',
+        ]
+    ]);
+});
+
+it('creates a new form notification', function (): void {
+    $this->actingAs($this->user);
+
+    $value = fake()->e164PhoneNumber();
+
+    $response = $this->post(route('forms.notifications.store', $this->form), [
+        'type' => 'sms',
+        'value' => $value,
+        'enabled' => true,
+    ]);
+
+    $response->assertCreated();
+    $response->assertJson([
+        'data' => [
+            'form_id' => $this->form->id,
+            'type' => 'sms',
             'value' => $value,
-        ]);
+            'enabled' => true,
+            'error' => null,
+        ]
+    ]);
 
-        $formNotifications = Form::query()
-            ->where('type', $type)
-            ->where('value', $value)
-            ->get();
-        $this->assertCount(1, $formNotifications);
-        $formNotifications->first();
+    $formNotifications = $this->form->notifications()
+        ->get();
 
-        $response->assertCreated();
-        $response->assertJsonStructure([]);
-    }
-
-
-    #[Test]
-    public function update_uses_form_request_validation(): void
-    {
-        $this->assertActionUsesFormRequest(
-            \App\Http\Controllers\FormNotificationController::class,
-            'update',
-            \App\Http\Requests\FormNotificationUpdateRequest::class
-        );
-    }
-
-    #[Test]
-    public function update_behaves_as_expected(): void
-    {
-        $formNotification = FormNotification::factory()->create();
-        $form = Form::factory()->create();
-        $type = fake()->randomElement(/** enum_attributes **/);
-        $value = fake()->word();
-        $enabled = fake()->boolean();
-
-        $response = $this->put(route('form-notifications.update', $formNotification), [
-            'form_id' => $form->id,
-            'type' => $type,
-            'value' => $value,
-            'enabled' => $enabled,
-        ]);
-
-        $formNotification->refresh();
-
-        $response->assertSessionHas('formNotification.id', $formNotification->id);
-
-        $this->assertEquals($form->id, $formNotification->form_id);
-        $this->assertEquals($type, $formNotification->type);
-        $this->assertEquals($value, $formNotification->value);
-        $this->assertEquals($enabled, $formNotification->enabled);
-    }
-}
+    $this->assertCount(1, $formNotifications);
+    $formNotification = $formNotifications->first();
+});

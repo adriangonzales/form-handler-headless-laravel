@@ -8,8 +8,6 @@ use App\Http\Resources\FormNotificationCollection;
 use App\Http\Resources\FormNotificationResource;
 use App\Models\Form;
 use App\Models\FormNotification;
-use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 
 class FormNotificationController extends Controller
 {
@@ -18,22 +16,22 @@ class FormNotificationController extends Controller
         return new FormNotificationCollection($form->notifications()->paginate());
     }
 
-    public function show(FormNotification $formNotification): FormNotificationResource
+    public function show(FormNotification $notification): FormNotificationResource
     {
-        return new FormNotificationResource($formNotification);
+        return new FormNotificationResource($notification);
     }
 
     public function store(FormNotificationStoreRequest $request, Form $form): FormNotificationResource
     {
-        $formNotification = $form->notifications()->create($request->validated());
+        $notification = $form->notifications()->create($request->validated());
 
-        return new FormNotificationResource($formNotification);
+        return new FormNotificationResource($notification);
     }
 
-    public function update(FormNotificationUpdateRequest $request, FormNotification $formNotification): FormNotificationResource
+    public function update(FormNotificationUpdateRequest $request, FormNotification $notification): FormNotificationResource
     {
-        $formNotification->update($request->validated());
+        $notification->update($request->validated());
 
-        return new FormNotificationResource($formNotification->fresh());
+        return new FormNotificationResource($notification->fresh());
     }
 }

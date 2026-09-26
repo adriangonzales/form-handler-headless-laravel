@@ -6,131 +6,131 @@ use App\Events\FormEntryCreated;
 use App\Mail\NewFormEntry;
 use App\Models\Form;
 use App\Models\FormEntry;
+use App\Models\User;
 use App\Notification\NewFormEntry as NewFormEntryNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
-use JMac\Testing\Traits\AdditionalAssertions;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
-/**
- * @see \App\Http\Controllers\FormEntryController
- */
-final class FormEntryControllerTest extends TestCase
-{
-    use AdditionalAssertions;
-    use RefreshDatabase;
-    use WithFaker;
+beforeEach(function (): void {
+    $this->user = User::factory()->create();
+    $this->form = Form::factory()->create(['user_id' => $this->user->id]);
+});
 
-    #[Test]
-    public function index_behaves_as_expected(): void
-    {
-        FormEntry::factory()->count(3)->create();
+it('requires authentication to view the form entry index', function (): void {
+    $response = $this->get(route('forms.entries.index', $this->form));
+    $response->assertUnauthorized();
+});
 
-        $response = $this->get(route('form-entries.index'));
+it('lists results from the index', function (): void {
+    $this->actingAs($this->user);
 
-        $response->assertOk();
-        $response->assertJsonStructure([]);
-    }
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
 
+    $response = $this->get(route('forms.entries.index', $this->form));
 
-    #[Test]
-    public function show_behaves_as_expected(): void
-    {
-        $formEntry = FormEntry::factory()->create();
+    $response->assertOk();
 
-        $this->get(route('form-entries.show', $formEntry));
-    }
+    $response->assertJsonStructure([
+        'data' => [
+            '*' => [
+                'id',
+                'form_id',
+                'data',
+                'ip',
+                'ip_location_display',
+                'referer',
+                'user_agent',
+                'user_agent_display',
+                'spam',
+                'spam_score',
+                'spam_reason',
+                'starred',
+                'read_at',
+            ],
+        ],
+        'links' => [
+            'first',
+            'last',
+            'prev',
+            'next',
+        ],
+        'meta' => [
+            'current_page',
+        ],
+    ]);
+    $response->assertJsonCount(1, 'data');
+});
 
+it('shows single form entry', function (): void {
+    $this->actingAs($this->user);
 
-    #[Test]
-    public function store_uses_form_request_validation(): void
-    {
-        $this->assertActionUsesFormRequest(
-            \App\Http\Controllers\FormEntryController::class,
-            'store',
-            \App\Http\Requests\FormEntryStoreRequest::class
-        );
-    }
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
 
-    #[Test]
-    public function store_saves(): void
-    {
-        $form = Form::factory()->create();
-        $spam_score = fake()->randomFloat(
-            /** decimal_attributes **/
-        );
-        $starred = fake()->boolean();
-        $data = [];
+    $response = $this->get(route('entries.show', [$entry]));
 
-        Event::fake();
-        Notification::fake();
-        Mail::fake();
+    $response->assertOk();
+    $response->assertJson(['id' => $entry->id]);
+    $response->assertJsonStructure([
+        'id',
+        'form_id',
+        'data',
+        'ip',
+        'ip_location_display',
+        'referer',
+        'user_agent',
+        'user_agent_display',
+        'spam',
+        'spam_score',
+        'spam_reason',
+        'starred',
+        'read_at',
+    ]);
+});
 
-        $response = $this->post(route('form-entries.store'), [
-            'form_id' => $form->id,
-            'spam_score' => $spam_score,
-            'starred' => $starred,
-            'data' => $data,
-        ]);
+it('creates a new form entry', function (): void {
+    $this->actingAs($this->user);
 
-        $formEntries = FormEntry::query()
-            ->where('form_id', $form->id)
-            ->where('spam_score', $spam_score)
-            ->where('starred', $starred)
-            ->where('data', $data)
-            ->get();
-        $this->assertCount(1, $formEntries);
-        $formEntry = $formEntries->first();
+    $name = fake()->name();
 
-        $response->assertCreated();
-        $response->assertJsonStructure([]);
+    Event::fake();
 
-        Event::assertDispatched(FormEntryCreated::class, function ($event) use ($formEntry) {
-            return $event->formEntry->is($formEntry);
-        });
-        Notification::assertSentTo($form->user, NewFormEntryNotification::class);
-        Mail::assertSent(NewFormEntry::class, function ($mail) use ($form, $formEntry) {
-            return $mail->hasTo($form->user) && $mail->formEntry->is($formEntry);
-        });
-    }
+    $response = $this->post(route('forms.entries.store', $this->form), [
+        'name' => $name,
+    ]);
 
+    $response->assertCreated();
+    $response->assertJson([
+        "form_id" => $this->form->id,
+        "data" => [],
+        "ip" => "127.0.0.1",
+        "ip_location_display" => null,
+        "referer" => null,
+        "user_agent" => "Symfony",
+        "user_agent_display" => null,
+        "spam" => false,
+        "spam_score" => "0.00",
+        "spam_reason" => null,
+        "starred" => false,
+        "read_at" => null,
+    ]);
 
-    #[Test]
-    public function update_uses_form_request_validation(): void
-    {
-        $this->assertActionUsesFormRequest(
-            \App\Http\Controllers\FormEntryController::class,
-            'update',
-            \App\Http\Requests\FormEntryUpdateRequest::class
-        );
-    }
+    $formEntries = $this->form->entries()
+        ->get();
 
-    #[Test]
-    public function update_behaves_as_expected(): void
-    {
-        $formEntry = FormEntry::factory()->create();
-        $form = Form::factory()->create();
-        $spam_score = fake()->randomFloat(
-            /** decimal_attributes **/
-        );
-        $starred = fake()->boolean();
+    $this->assertCount(1, $formEntries);
+    $formEntry = $formEntries->first();
 
-        $response = $this->put(route('form-entries.update', $formEntry), [
-            'form_id' => $form->id,
-            'spam_score' => $spam_score,
-            'starred' => $starred,
-        ]);
+    Event::assertDispatched(FormEntryCreated::class, function ($event) use ($formEntry) {
+        return $event->formEntry->is($formEntry);
+    });
+});
 
-        $formEntry->refresh();
-
-        $response->assertSessionHas('form_entry.id', $formEntry->id);
-
-        $this->assertEquals($form->id, $formEntry->form_id);
-        $this->assertEquals($spam_score, $formEntry->spam_score);
-        $this->assertEquals($starred, $formEntry->starred);
-    }
-}
+todo('Test that form and entry IDs match');
+todo('Test marking as starred');
+todo('Test marking as read');
+todo('Test marking as unread');

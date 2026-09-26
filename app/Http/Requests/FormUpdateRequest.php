@@ -22,7 +22,6 @@ class FormUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => ['required', 'integer', 'exists:users.id,id'],
             'name' => ['required', 'string', 'max:400'],
             'active' => ['required'],
             'schema' => ['nullable', 'json'],

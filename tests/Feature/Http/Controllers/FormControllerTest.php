@@ -5,115 +5,127 @@ namespace Tests\Feature\Http\Controllers;
 use App\Events\FormCreated;
 use App\Models\Form;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Event;
-use JMac\Testing\Traits\AdditionalAssertions;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 
-/**
- * @see \App\Http\Controllers\FormController
- */
-final class FormControllerTest extends TestCase
-{
-    use AdditionalAssertions;
-    use RefreshDatabase;
-    use WithFaker;
+it('requires authentication to view the form index', function (): void {
+    $response = $this->get('/api/v1/forms');
+    $response->assertUnauthorized();
+});
 
-    #[Test]
-    public function index_behaves_as_expected(): void
-    {
-        Form::factory()->count(3)->create();
+it('lists results from the index', function (): void {
+    $user = User::factory()->create();
+    $form = Form::factory()->create(['user_id' => $user->id]);
 
-        $response = $this->get(route('forms.index'));
+    $user2 = User::factory()->create();
+    $form2 = Form::factory()->create(['user_id' => $user2->id]);
 
-        $response->assertOk();
-        $response->assertJsonStructure([]);
-    }
+    $this->actingAs($user);
 
+    $response = $this->get('/api/v1/forms');
 
-    #[Test]
-    public function show_behaves_as_expected(): void
-    {
-        $form = Form::factory()->create();
+    $response->assertOk();
+    $response->assertJsonStructure([
+        'data' => [
+            '*' => [
+                'id',
+                'user_id',
+                'name',
+                'active',
+                'schema',
+                'settings',
+            ]
+        ],
+        'links' => [
+            'first',
+            'last',
+            'prev',
+            'next',
+        ],
+        'meta' => [
+            'current_page',
+        ],
+    ]);
+    $response->assertJsonCount(1, 'data');
+});
 
-        $this->get(route('forms.show', $form));
-    }
+it('shows details of a form', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
 
+    $form = $user->forms()->getModel()->factory()->create();
 
-    #[Test]
-    public function store_uses_form_request_validation(): void
-    {
-        $this->assertActionUsesFormRequest(
-            \App\Http\Controllers\FormController::class,
-            'store',
-            \App\Http\Requests\FormStoreRequest::class
-        );
-    }
+    $response = $this->get(route('forms.show', $form));
 
-    #[Test]
-    public function store_saves(): void
-    {
-        $name = fake()->name();
-        $schema = [];
-        $settings = [];
+    $response->assertOk();
+    $response->assertJson([
+        'data' => [
+            'id' => $form->id,
+            'user_id' => $form->user_id,
+            'name' => $form->name,
+            'active' => $form->active,
+            'schema' => $form->schema,
+            'settings' => $form->settings,
+        ],
+    ]);
+});
 
-        Event::fake();
+it('creates a new form', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
 
-        $response = $this->post(route('forms.store'), [
-            'name' => $name,
-            'schema' => $schema,
-            'settings' => $settings,
-        ]);
+    $name = fake()->name();
+    $schema = [];
+    $settings = [];
 
-        $forms = Form::query()
-            ->where('name', $name)
-            ->where('schema', $schema)
-            ->where('settings', $settings)
-            ->get();
-        $this->assertCount(1, $forms);
-        $form = $forms->first();
+    Event::fake();
 
-        $response->assertCreated();
-        $response->assertJsonStructure([]);
+    $response = $this->post(route('forms.store'), [
+        'name' => $name,
+        'schema' => json_encode($schema),
+        'settings' => json_encode($settings),
+    ]);
 
-        Event::assertDispatched(FormCreated::class, function ($event) use ($form) {
-            return $event->form->is($form);
-        });
-    }
+    $response->assertCreated();
+    $response->assertJsonStructure([]);
 
+    $forms = $user->forms()
+        ->where('name', $name)
+        ->get();
 
-    #[Test]
-    public function update_uses_form_request_validation(): void
-    {
-        $this->assertActionUsesFormRequest(
-            \App\Http\Controllers\FormController::class,
-            'update',
-            \App\Http\Requests\FormUpdateRequest::class
-        );
-    }
+    $this->assertCount(1, $forms);
+    $form = $forms->first();
 
-    #[Test]
-    public function update_behaves_as_expected(): void
-    {
-        $form = Form::factory()->create();
-        $user = User::factory()->create();
-        $name = fake()->name();
-        $active = fake()->boolean();
+    Event::assertDispatched(FormCreated::class, function ($event) use ($form) {
+        return $event->form->is($form);
+    });
+});
 
-        $response = $this->put(route('forms.update', $form), [
+it('updates a form', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $form = Form::factory()->create(['user_id' => $user->id]);
+
+    $name = fake()->name();
+    $active = fake()->boolean();
+
+    $response = $this->put(route('forms.update', $form), [
+        'name' => $name,
+        'active' => $active,
+    ]);
+
+    $response->assertOk();
+    $response->assertJson([
+        'data' => [
+            'id' => $form->id,
             'user_id' => $user->id,
             'name' => $name,
             'active' => $active,
-        ]);
+        ]
+    ]);
 
-        $form->refresh();
-
-        $response->assertSessionHas('form.id', $form->id);
-
-        $this->assertEquals($user->id, $form->user_id);
-        $this->assertEquals($name, $form->name);
-        $this->assertEquals($active, $form->active);
-    }
-}
+    $form->refresh();
+    $this->assertEquals($user->id, $form->user_id);
+    $this->assertEquals($name, $form->name);
+    $this->assertEquals($active, $form->active);
+});

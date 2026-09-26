@@ -23,7 +23,7 @@ class FormEntryFactory extends Factory
             'user_agent' => fake()->word(),
             'user_agent_display' => fake()->word(),
             'spam' => fake()->boolean(),
-            'spam_score' => fake()->randomFloat(0, 0, 9999999999.),
+            'spam_score' => fake()->randomFloat(2, 0, 1),
             'spam_reason' => fake()->word(),
             'starred' => fake()->boolean(),
             'read_at' => fake()->dateTime(),

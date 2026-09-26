@@ -24,6 +24,7 @@ class FormNotificationStoreRequest extends FormRequest
         return [
             'type' => ['required', 'in:email,sms'],
             'value' => ['required', 'string'],
+            'enabled' => ['sometimes', 'boolean'],
         ];
     }
 }

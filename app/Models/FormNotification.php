@@ -33,6 +33,15 @@ class FormNotification extends Model
         ];
     }
 
+    /**
+     * The model's default values for attributes.
+     *
+     * @var array
+     */
+    protected $attributes = [
+        'enabled' => false,
+    ];
+
     public function form(): BelongsTo
     {
         return $this->belongsTo(Form::class);

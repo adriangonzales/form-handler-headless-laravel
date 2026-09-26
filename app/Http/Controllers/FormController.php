@@ -8,12 +8,14 @@ use App\Http\Requests\FormUpdateRequest;
 use App\Http\Resources\FormCollection;
 use App\Http\Resources\FormResource;
 use App\Models\Form;
+use Illuminate\Http\Request;
 
 class FormController extends Controller
 {
-    public function index(): FormCollection
+    public function index(Request $request): FormCollection
     {
-        $forms = Form::query()->oldest()
+        $forms = $request->user()->forms()
+            ->oldest()
             ->paginate();
 
         return new FormCollection($forms);
@@ -26,7 +28,7 @@ class FormController extends Controller
 
     public function store(FormStoreRequest $request): FormResource
     {
-        $form = Form::create($request->validated());
+        $form = $request->user()->forms()->create($request->validated());
 
         event(new FormCreated($form));
 

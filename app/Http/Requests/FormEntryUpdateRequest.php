@@ -22,7 +22,6 @@ class FormEntryUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'form_id' => ['required', 'integer', 'exists:forms.id,id'],
             'data' => ['nullable', 'json'],
             'ip' => ['nullable', 'string'],
             'ip_location_display' => ['nullable', 'string'],

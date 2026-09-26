@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Actions\Forms\BuildValidationRules;
+use App\Models\Form;
 use Illuminate\Foundation\Http\FormRequest;
 
 class FormEntryStoreRequest extends FormRequest
@@ -21,19 +23,9 @@ class FormEntryStoreRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'form_id' => ['required', 'integer', 'exists:forms.id,id'],
-            'ip' => ['nullable', 'string'],
-            'ip_location_display' => ['nullable', 'string'],
-            'referer' => ['nullable', 'string'],
-            'user_agent' => ['nullable', 'string'],
-            'user_agent_display' => ['nullable', 'string'],
-            'spam' => ['nullable'],
-            'spam_score' => ['required', 'numeric'],
-            'spam_reason' => ['nullable', 'string'],
-            'starred' => ['required'],
-            'read_at' => ['nullable'],
-            'data' => ['nullable', 'json'],
-        ];
+        /** @param Form **/
+        $form = $this->route('form');
+
+        return (new BuildValidationRules())($form);
     }
 }

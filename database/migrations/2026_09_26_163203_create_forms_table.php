@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::disableForeignKeyConstraints();
 
         Schema::create('forms', function (Blueprint $table): void {
-            $table->ulid('id');
+            $table->ulid('id')->primary();
             $table->foreignId('user_id')->constrained();
             $table->string('name', 400);
             $table->boolean('active')->default(false);
