@@ -21,26 +21,27 @@ A Form Entry is one submission to a form. The service validates submitted fields
 
 Table `form_entries`:
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `id` | ULID (PK) | |
-| `form_id` | FK (ULID) → `forms.id` | |
-| `data` | JSON, nullable | Validated submission values |
-| `ip` | string, nullable | All client IPs from the request, comma-joined |
-| `ip_location_display` | string, nullable | Reserved; not populated |
-| `referer` | string, nullable | See Known issues |
-| `user_agent` | string, nullable | Raw UA string |
-| `user_agent_display` | string, nullable | Reserved; not populated |
-| `spam` | boolean, nullable | Model default `false` |
-| `spam_score` | decimal(4,3) | Default `0` |
-| `spam_reason` | string, nullable | |
-| `starred` | boolean | Default `false` |
-| `read_at` | timestamp, nullable | `null` = unread |
-| `created_at`, `updated_at`, `deleted_at` | timestamps | Soft-deletable |
+| Field                                    | Type                   | Notes                                         |
+| ---------------------------------------- | ---------------------- | --------------------------------------------- |
+| `id`                                     | ULID (PK)              |                                               |
+| `form_id`                                | FK (ULID) → `forms.id` |                                               |
+| `data`                                   | JSON, nullable         | Validated submission values                   |
+| `ip`                                     | string, nullable       | All client IPs from the request, comma-joined |
+| `ip_location_display`                    | string, nullable       | Reserved; not populated                       |
+| `referer`                                | string, nullable       | See Known issues                              |
+| `user_agent`                             | string, nullable       | Raw UA string                                 |
+| `user_agent_display`                     | string, nullable       | Reserved; not populated                       |
+| `spam`                                   | boolean, nullable      | Model default `false`                         |
+| `spam_score`                             | decimal(4,3)           | Default `0`                                   |
+| `spam_reason`                            | string, nullable       |                                               |
+| `starred`                                | boolean                | Default `false`                               |
+| `read_at`                                | timestamp, nullable    | `null` = unread                               |
+| `created_at`, `updated_at`, `deleted_at` | timestamps             | Soft-deletable                                |
 
 ## 5. Functional requirements
 
 **FR-1 Submit an entry.** `POST /api/v1/forms/{form}/entries` (Sanctum-authenticated).
+
 - The form must be active; otherwise the request is rejected with `403 {"message":"This form is not accepting submissions."}` before validation.
 - Request fields are validated with the rules built from the form's schema (see [Forms FR-5](forms.md)). Failures return 422 with per-field errors.
 - Only validated fields are stored in `data`; unknown fields are silently dropped. A form with an empty schema stores `data: []`.
@@ -54,13 +55,13 @@ Table `form_entries`:
 
 **FR-4 Update an entry.** `PUT/PATCH /api/v1/entries/{entry}` accepts:
 
-| Field | Rules |
-| --- | --- |
-| `spam_score` | required, numeric |
-| `starred` | required |
-| `data` | nullable, json |
-| `ip`, `ip_location_display`, `referer`, `user_agent`, `user_agent_display`, `spam_reason` | nullable, string |
-| `spam`, `read_at` | nullable |
+| Field                                                                                     | Rules             |
+| ----------------------------------------------------------------------------------------- | ----------------- |
+| `spam_score`                                                                              | required, numeric |
+| `starred`                                                                                 | required          |
+| `data`                                                                                    | nullable, json    |
+| `ip`, `ip_location_display`, `referer`, `user_agent`, `user_agent_display`, `spam_reason` | nullable, string  |
+| `spam`, `read_at`                                                                         | nullable          |
 
 Returns the refreshed entry. This is the mechanism for starring, marking read/unread, and flagging spam.
 
@@ -69,7 +70,7 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 ## 6. Gaps
 
 - **No public submission endpoint.** The store route is behind `auth:sanctum`, so a browser form cannot post to it without exposing a token. The controller has a TODO to split out an inbound, public-facing endpoint. This is the most significant gap for a "headless form handler".
-- **Entries are not scoped to their form.** The index endpoint ignores `{form}` and returns entries from *every* form in the system.
+- **Entries are not scoped to their form.** The index endpoint ignores `{form}` and returns entries from _every_ form in the system.
 - **No ownership checks** on list, show, or update — any authenticated user can read or edit any entry.
 - **No spam protection** (captcha, honeypot, rate limiting on submissions). Placeholders only.
 - **No IP geolocation or user-agent parsing** for the `*_display` fields.

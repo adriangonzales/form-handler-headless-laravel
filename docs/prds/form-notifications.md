@@ -21,15 +21,15 @@ Form Notifications let an account holder list the recipients who should be alert
 
 Table `form_notifications`:
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `id` | ULID (PK) | |
-| `form_id` | FK (ULID) → `forms.id` | |
-| `type` | enum `email` \| `sms` | |
-| `value` | string | Email address or phone number |
-| `enabled` | boolean | DB default `true`; model default `false` (see Known issues) |
-| `error` | string, nullable | Intended for the last delivery error; never written by the system |
-| `created_at`, `updated_at`, `deleted_at` | timestamps | Soft-deletable |
+| Field                                    | Type                   | Notes                                                             |
+| ---------------------------------------- | ---------------------- | ----------------------------------------------------------------- |
+| `id`                                     | ULID (PK)              |                                                                   |
+| `form_id`                                | FK (ULID) → `forms.id` |                                                                   |
+| `type`                                   | enum `email` \| `sms`  |                                                                   |
+| `value`                                  | string                 | Email address or phone number                                     |
+| `enabled`                                | boolean                | DB default `true`; model default `false` (see Known issues)       |
+| `error`                                  | string, nullable       | Intended for the last delivery error; never written by the system |
+| `created_at`, `updated_at`, `deleted_at` | timestamps             | Soft-deletable                                                    |
 
 ## 5. Functional requirements
 
@@ -39,11 +39,11 @@ Table `form_notifications`:
 
 **FR-3 Add a recipient.** `POST /api/v1/forms/{form}/notifications` accepts:
 
-| Field | Rules |
-| --- | --- |
-| `type` | required, `email` or `sms` |
-| `value` | required, string |
-| `enabled` | optional, boolean |
+| Field     | Rules                      |
+| --------- | -------------------------- |
+| `type`    | required, `email` or `sms` |
+| `value`   | required, string           |
+| `enabled` | optional, boolean          |
 
 Responds `201` with the recipient resource.
 

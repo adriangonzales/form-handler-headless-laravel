@@ -20,15 +20,15 @@ A Form is the central object of the product. An account holder creates a form, d
 
 Table `forms`:
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `id` | ULID (PK) | Generated automatically |
-| `user_id` | FK → `users.id` | Owner. Set from the authenticated user on create |
-| `name` | string(400) | Required |
-| `active` | boolean | Defaults to `false` |
-| `schema` | JSON, nullable | Field definitions (see §5) |
-| `settings` | JSON, nullable | Cast to the `App\Data\FormSettings` data object (see §5a) |
-| `created_at`, `updated_at`, `deleted_at` | timestamps | Soft-deletable |
+| Field                                    | Type            | Notes                                                     |
+| ---------------------------------------- | --------------- | --------------------------------------------------------- |
+| `id`                                     | ULID (PK)       | Generated automatically                                   |
+| `user_id`                                | FK → `users.id` | Owner. Set from the authenticated user on create          |
+| `name`                                   | string(400)     | Required                                                  |
+| `active`                                 | boolean         | Defaults to `false`                                       |
+| `schema`                                 | JSON, nullable  | Field definitions (see §5)                                |
+| `settings`                               | JSON, nullable  | Cast to the `App\Data\FormSettings` data object (see §5a) |
+| `created_at`, `updated_at`, `deleted_at` | timestamps      | Soft-deletable                                            |
 
 Relationships: belongs to a `User`; has many `FormEntry`; has many `FormNotification`.
 
@@ -38,17 +38,17 @@ Relationships: belongs to a `User`; has many `FormEntry`; has many `FormNotifica
 
 ```json
 {
-  "01J9...A": { "label": "Name",    "rules": ["required"] },
-  "01J9...B": { "label": "Email",   "rules": "required,email" },
-  "01J9...C": { "label": "Message", "name": "message" }
+    "01J9...A": { "label": "Name", "rules": ["required"] },
+    "01J9...B": { "label": "Email", "rules": "required,email" },
+    "01J9...C": { "label": "Message", "name": "message" }
 }
 ```
 
-| Key | Required | Meaning |
-| --- | --- | --- |
-| `label` | No | Human-readable label. Used when displaying entry data; falls back to the field ID |
-| `rules` | No | Laravel validation rules, either an array or a comma-separated string. Defaults to `["sometimes"]` |
-| `name` | No | Overrides the input name used for validation. Defaults to the field ID |
+| Key     | Required | Meaning                                                                                            |
+| ------- | -------- | -------------------------------------------------------------------------------------------------- |
+| `label` | No       | Human-readable label. Used when displaying entry data; falls back to the field ID                  |
+| `rules` | No       | Laravel validation rules, either an array or a comma-separated string. Defaults to `["sometimes"]` |
+| `name`  | No       | Overrides the input name used for validation. Defaults to the field ID                             |
 
 The factory's `withBasicSchema()` state and the tests use ULIDs as field IDs, but any string key works.
 
@@ -58,17 +58,17 @@ The factory's `withBasicSchema()` state and the tests use ULIDs as field IDs, bu
 
 ```json
 {
-  "redirect": "https://example.com/thanks",
-  "timezone": "America/Chicago",
-  "domains": ["example.com", "*.example.org"]
+    "redirect": "https://example.com/thanks",
+    "timezone": "America/Chicago",
+    "domains": ["example.com", "*.example.org"]
 }
 ```
 
-| Key | Type | Default | Rules | Intended use |
-| --- | --- | --- | --- | --- |
-| `redirect` | string \| null | `null` | URL, max 2048 | Where to send a browser after a successful submission |
-| `timezone` | string \| null | `null` | Valid PHP timezone identifier | Displaying entry timestamps and notification content |
-| `domains` | list of strings \| null | `[]` | List of hostnames; a leading `*.` wildcard is allowed. No scheme, port or path | Origins allowed to submit to the form |
+| Key        | Type                    | Default | Rules                                                                          | Intended use                                          |
+| ---------- | ----------------------- | ------- | ------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| `redirect` | string \| null          | `null`  | URL, max 2048                                                                  | Where to send a browser after a successful submission |
+| `timezone` | string \| null          | `null`  | Valid PHP timezone identifier                                                  | Displaying entry timestamps and notification content  |
+| `domains`  | list of strings \| null | `[]`    | List of hostnames; a leading `*.` wildcard is allowed. No scheme, port or path | Origins allowed to submit to the form                 |
 
 - Unknown keys are rejected with a 422 on `settings`. They are not silently dropped.
 - Omitted keys take their defaults. A form with settings always returns all three keys.
@@ -84,11 +84,11 @@ The factory's `withBasicSchema()` state and the tests use ULIDs as field IDs, bu
 
 **FR-3 Create a form.** `POST /api/v1/forms` accepts:
 
-| Field | Rules |
-| --- | --- |
-| `name` | required, string, max 400 |
-| `schema` | nullable, array (a JSON-encoded string is rejected with 422) |
-| `settings` | nullable, object matching §5a |
+| Field      | Rules                                                        |
+| ---------- | ------------------------------------------------------------ |
+| `name`     | required, string, max 400                                    |
+| `schema`   | nullable, array (a JSON-encoded string is rejected with 422) |
+| `settings` | nullable, object matching §5a                                |
 
 The form is created under the authenticated user, `active` defaults to `false`, a `FormCreated` event is dispatched, and the response is `201` with the form resource.
 

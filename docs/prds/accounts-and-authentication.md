@@ -15,16 +15,16 @@ The system has two entry points for account holders: a session-based web app (In
 
 ### Pages
 
-| Route | Page | Access |
-| --- | --- | --- |
-| `/` | Welcome | Public |
-| `/login`, `/forgot-password`, `/reset-password/{token}` | Auth pages | Guest |
-| `/two-factor-challenge` | 2FA code / recovery code entry | Mid-login |
-| `/user/confirm-password` | Password confirmation | Authenticated |
-| `/dashboard` | Dashboard (placeholder content) | Authenticated |
-| `/settings/profile` | Name and email; delete account | Authenticated |
-| `/settings/security` | Change password, 2FA, passkeys (requires recent password confirmation) | Authenticated |
-| `/settings/appearance` | Light / dark / system theme | Authenticated |
+| Route                                                   | Page                                                                   | Access        |
+| ------------------------------------------------------- | ---------------------------------------------------------------------- | ------------- |
+| `/`                                                     | Welcome                                                                | Public        |
+| `/login`, `/forgot-password`, `/reset-password/{token}` | Auth pages                                                             | Guest         |
+| `/two-factor-challenge`                                 | 2FA code / recovery code entry                                         | Mid-login     |
+| `/user/confirm-password`                                | Password confirmation                                                  | Authenticated |
+| `/dashboard`                                            | Dashboard (placeholder content)                                        | Authenticated |
+| `/settings/profile`                                     | Name and email; delete account                                         | Authenticated |
+| `/settings/security`                                    | Change password, 2FA, passkeys (requires recent password confirmation) | Authenticated |
+| `/settings/appearance`                                  | Light / dark / system theme                                            | Authenticated |
 
 ### Functional requirements
 

@@ -10,12 +10,12 @@ A small Inertia/React web app ships alongside the API for account management (lo
 
 ## Documents
 
-| PRD | Scope |
-| --- | --- |
-| [Forms](forms.md) | Creating and managing form definitions, the field schema, and settings |
-| [Form Entries](form-entries.md) | Accepting submissions, validation against the schema, captured metadata, triaging entries |
-| [Form Notifications](form-notifications.md) | Per-form email/SMS notification recipients and new-entry alerts |
-| [Accounts & Authentication](accounts-and-authentication.md) | Web login, API authentication, account settings, security features |
+| PRD                                                         | Scope                                                                                     |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [Forms](forms.md)                                           | Creating and managing form definitions, the field schema, and settings                    |
+| [Form Entries](form-entries.md)                             | Accepting submissions, validation against the schema, captured metadata, triaging entries |
+| [Form Notifications](form-notifications.md)                 | Per-form email/SMS notification recipients and new-entry alerts                           |
+| [Accounts & Authentication](accounts-and-authentication.md) | Web login, API authentication, account settings, security features                        |
 
 ## System at a glance
 
@@ -34,18 +34,18 @@ User (account holder)
 
 ## Cross-cutting status
 
-| Capability | Status |
-| --- | --- |
-| Form CRUD (list, show, create, update, delete, restore, duplicate) | Built |
-| Schema-driven submission validation | Built |
-| Entry list / show / update | Built, not scoped to owner |
-| Public (unauthenticated) submissions | **Not built.** Submission requires an API token |
-| Ownership authorization | Enforced on form show/update. **Not enforced** on entries or notifications |
-| Notifications on new entry | **Not built.** Recipients can be stored; nothing is sent |
-| Spam detection, IP geolocation, UA parsing | **Not built.** Columns exist, placeholders only |
-| Delete / restore / duplicate via API | Built for forms. Not built for entries or notifications |
-| Form-management web UI | Not built (dashboard is a placeholder) |
-| Self-service registration | Disabled |
+| Capability                                                         | Status                                                                     |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Form CRUD (list, show, create, update, delete, restore, duplicate) | Built                                                                      |
+| Schema-driven submission validation                                | Built                                                                      |
+| Entry list / show / update                                         | Built, not scoped to owner                                                 |
+| Public (unauthenticated) submissions                               | **Not built.** Submission requires an API token                            |
+| Ownership authorization                                            | Enforced on form show/update. **Not enforced** on entries or notifications |
+| Notifications on new entry                                         | **Not built.** Recipients can be stored; nothing is sent                   |
+| Spam detection, IP geolocation, UA parsing                         | **Not built.** Columns exist, placeholders only                            |
+| Delete / restore / duplicate via API                               | Built for forms. Not built for entries or notifications                    |
+| Form-management web UI                                             | Not built (dashboard is a placeholder)                                     |
+| Self-service registration                                          | Disabled                                                                   |
 
 ## Conventions used in these PRDs
 
