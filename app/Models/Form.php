@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Data\FormSettings;
 use Database\Factories\FormFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property array<string, array{label?: string, name?: string, rules?: list<string>|string}>|null $schema
- * @property array<string, mixed>|null $settings
+ * @property FormSettings|null $settings
  */
 #[Fillable([
     'user_id',
@@ -40,7 +41,7 @@ class Form extends Model
         return [
             'active' => 'boolean',
             'schema' => 'array',
-            'settings' => 'array',
+            'settings' => FormSettings::class,
         ];
     }
 

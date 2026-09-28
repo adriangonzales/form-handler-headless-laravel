@@ -27,7 +27,7 @@ Table `forms`:
 | `name` | string(400) | Required |
 | `active` | boolean | Defaults to `false` |
 | `schema` | JSON, nullable | Field definitions (see §5) |
-| `settings` | JSON, nullable | Free-form key/value object |
+| `settings` | JSON, nullable | Cast to the `App\Data\FormSettings` data object (see §5a) |
 | `created_at`, `updated_at`, `deleted_at` | timestamps | Soft-deletable |
 
 Relationships: belongs to a `User`; has many `FormEntry`; has many `FormNotification`.
@@ -52,6 +52,30 @@ Relationships: belongs to a `User`; has many `FormEntry`; has many `FormNotifica
 
 The factory's `withBasicSchema()` state and the tests use ULIDs as field IDs, but any string key works.
 
+## 5a. Settings format
+
+`settings` is defined by `App\Data\FormSettings` (spatie/laravel-data), which is the single source of truth for both the allowed keys and their validation rules.
+
+```json
+{
+  "redirect": "https://example.com/thanks",
+  "timezone": "America/Chicago",
+  "domains": ["example.com", "*.example.org"]
+}
+```
+
+| Key | Type | Default | Rules | Intended use |
+| --- | --- | --- | --- | --- |
+| `redirect` | string \| null | `null` | URL, max 2048 | Where to send a browser after a successful submission |
+| `timezone` | string \| null | `null` | Valid PHP timezone identifier | Displaying entry timestamps and notification content |
+| `domains` | list of strings \| null | `[]` | List of hostnames; a leading `*.` wildcard is allowed. No scheme, port or path | Origins allowed to submit to the form |
+
+- Unknown keys are rejected with a 422 on `settings`. They are not silently dropped.
+- Omitted keys take their defaults. A form with settings always returns all three keys.
+- `settings` itself may be `null` or omitted, in which case the form has no settings and the API returns `null`.
+- Validation is shared by create and update through `App\Concerns\FormSettingsValidationRules`, which reads the allowed keys and rules from `FormSettings`. Adding a property to `FormSettings` is enough to accept and validate a new setting.
+- Planned settings (noted in `FormSettings`): CAPTCHA type (none, reCAPTCHA, hCaptcha) and secret key, honeypot enabled flag and field name.
+
 ## 6. Functional requirements
 
 **FR-1 List forms.** `GET /api/v1/forms` returns the authenticated user's forms only, oldest first, paginated (Laravel default of 15 per page) with `links` and `meta`.
@@ -64,11 +88,11 @@ The factory's `withBasicSchema()` state and the tests use ULIDs as field IDs, bu
 | --- | --- |
 | `name` | required, string, max 400 |
 | `schema` | nullable, array (a JSON-encoded string is rejected with 422) |
-| `settings` | nullable, array |
+| `settings` | nullable, object matching §5a |
 
 The form is created under the authenticated user, `active` defaults to `false`, a `FormCreated` event is dispatched, and the response is `201` with the form resource.
 
-**FR-4 Update a form.** `PUT/PATCH /api/v1/forms/{form}` accepts `name` (required, string, max 400), `active` (required), `schema` (nullable, array), `settings` (nullable, array). Because `name` and `active` are required, a PATCH is effectively a full replacement of those two fields. Only the owner may update a form (`FormPolicy::update`, checked in `FormUpdateRequest` before validation); anyone else receives the same 403.
+**FR-4 Update a form.** `PUT/PATCH /api/v1/forms/{form}` accepts `name` (required, string, max 400), `active` (required), `schema` (nullable, array), `settings` (nullable, object matching §5a). Because `name` and `active` are required, a PATCH is effectively a full replacement of those two fields. Only the owner may update a form (`FormPolicy::update`, checked in `FormUpdateRequest` before validation); anyone else receives the same 403.
 
 **FR-5 Schema → validation rules.** `BuildValidationRules` converts the schema into a Laravel rules array keyed by `name ?? fieldId`. String rules are split on commas. Fields without rules get `sometimes`. An empty or null schema produces no rules.
 
@@ -76,14 +100,19 @@ The form is created under the authenticated user, `active` defaults to `false`, 
 
 **FR-7 Entry display mapping.** `MapFormData` pairs each schema field with an entry's value, producing `{ fieldId: { label, data } }`. It is not yet used by any endpoint.
 
+**FR-8 Delete a form.** `DELETE /api/v1/forms/{form}` soft-deletes the form and returns `204`. Its entries and notifications are left untouched. A deleted form returns 404 from every other form endpoint (including submissions) until it is restored. Owner only (`FormPolicy::delete`). There is no permanent delete (`FormPolicy::forceDelete` denies).
+
+**FR-9 Restore a form.** `POST /api/v1/forms/{form}/restore` clears `deleted_at` and returns `200` with the form resource. The route resolves soft-deleted forms. Owner only (`FormPolicy::restore`).
+
+**FR-10 Duplicate a form.** `POST /api/v1/forms/{form}/duplicate` creates a new form owned by the same user, with the same `schema` and `settings`, the name suffixed with ` (copy)` (the original is truncated if needed to stay within 400 characters), and `active = false`. Entries and notification recipients are not copied. Dispatches `FormCreated` and returns `201` with the new form. Owner only (`FormPolicy::view`).
+
 ## 7. Events
 
-- `FormCreated(Form $form)` — dispatched after create. No listeners are registered.
+- `FormCreated(Form $form)` — dispatched after create and after duplicate. No listeners are registered.
 
 ## 8. Gaps
 
-- **No delete, restore, or duplicate endpoints**, despite soft-delete support and policy methods.
-- **`settings` has no defined contract.** The test suite stores a `redirect` URL, but nothing reads any setting.
+- **Settings are stored but not yet acted on.** `redirect`, `timezone` and `domains` are validated and returned, but no submission, notification or display logic reads them yet. Each depends on other work: `redirect` and `domains` on a public submission endpoint ([Form Entries](form-entries.md)), `timezone` on notification delivery ([Form Notifications](form-notifications.md)).
 - **Resource omits timestamps** (`created_at`, `updated_at`), so clients cannot sort or display them.
 - **No web UI** for forms; the dashboard page is the starter-kit placeholder.
 
@@ -97,4 +126,4 @@ The form is created under the authenticated user, `active` defaults to `false`, 
 
 1. Should field definitions support type, placeholder, options, and ordering, or stay validation-only?
 2. Should the schema be validated structurally (and rule names checked) when a form is saved?
-3. Which `settings` keys are supported (redirect URL, success message, allowed origins, honeypot field...)?
+3. Should a success message be added to `settings`, alongside the planned CAPTCHA and honeypot settings?

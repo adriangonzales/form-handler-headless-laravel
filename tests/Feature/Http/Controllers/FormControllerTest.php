@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Http\Controllers;
 
+use App\Data\FormSettings;
 use App\Events\FormCreated;
 use App\Models\Form;
 use App\Models\User;
@@ -64,7 +65,7 @@ it('shows details of a form', function (): void {
             'name' => $form->name,
             'active' => $form->active,
             'schema' => $form->schema,
-            'settings' => $form->settings,
+            'settings' => $form->settings->toArray(),
         ],
     ]);
 });
@@ -111,7 +112,11 @@ it('creates a new form', function (): void {
     $this->assertCount(1, $forms);
     $form = $forms->first();
     $this->assertSame($schema, $form->schema);
-    $this->assertSame($settings, $form->settings);
+    $this->assertSame([
+        'redirect' => $settings['redirect'],
+        'timezone' => null,
+        'domains' => [],
+    ], $form->settings->toArray());
 
     Event::assertDispatched(FormCreated::class, function ($event) use ($form) {
         return $event->form->is($form);
@@ -242,6 +247,7 @@ it('duplicates a form as a new inactive form', function (): void {
     $response = $this->postJson(route('forms.duplicate', $form));
 
     $response->assertCreated();
+
     $copy = Form::query()->whereKeyNot($form->id)->sole();
     $response->assertJson([
         'data' => [
@@ -282,3 +288,78 @@ it('forbids duplicating a form owned by another user', function (): void {
     $this->assertSame(1, Form::query()->count());
 });
 
+it('stores and returns every form setting', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $settings = [
+        'redirect' => 'https://example.com/thanks',
+        'timezone' => 'America/Chicago',
+        'domains' => ['example.com', '*.example.org'],
+    ];
+
+    $response = $this->postJson(route('forms.store'), [
+        'name' => fake()->name(),
+        'settings' => $settings,
+    ]);
+
+    $response->assertCreated();
+    $response->assertJson(['data' => ['settings' => $settings]]);
+
+    $form = $user->forms()->sole();
+    expect($form->settings)->toBeInstanceOf(FormSettings::class);
+    expect($form->settings->toArray())->toBe($settings);
+});
+
+it('fills in defaults for omitted form settings', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    $response = $this->postJson(route('forms.store'), [
+        'name' => fake()->name(),
+        'settings' => ['timezone' => 'UTC'],
+    ]);
+
+    $response->assertCreated();
+
+    expect($response->json('data.settings'))->toBe([
+        'redirect' => null,
+        'timezone' => 'UTC',
+        'domains' => [],
+    ]);
+});
+
+it('rejects invalid form settings', function (array $settings, string $errorKey): void {
+    $this->actingAs(User::factory()->create());
+
+    $response = $this->postJson(route('forms.store'), [
+        'name' => fake()->name(),
+        'settings' => $settings,
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors($errorKey);
+})->with([
+    'unknown key' => [['captcha' => 'recaptcha'], 'settings'],
+    'redirect is not a url' => [['redirect' => 'not a url'], 'settings.redirect'],
+    'redirect is too long' => [['redirect' => 'https://example.com/'.str_repeat('a', 2048)], 'settings.redirect'],
+    'unknown timezone' => [['timezone' => 'Mars/Olympus_Mons'], 'settings.timezone'],
+    'domains is not a list' => [['domains' => ['primary' => 'example.com']], 'settings.domains'],
+    'domain is not a hostname' => [['domains' => ['https://example.com/path']], 'settings.domains.0'],
+    'domain is not a string' => [['domains' => [123]], 'settings.domains.0'],
+]);
+
+it('validates settings when updating a form', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $form = Form::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->putJson(route('forms.update', $form), [
+        'name' => $form->name,
+        'active' => true,
+        'settings' => ['redirect' => 'not a url'],
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors('settings.redirect');
+});

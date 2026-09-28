@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Concerns\FormSettingsValidationRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class FormStoreRequest extends FormRequest
 {
+    use FormSettingsValidationRules;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -27,7 +30,7 @@ class FormStoreRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:400'],
             'schema' => ['nullable', 'array'],
-            'settings' => ['nullable', 'array'],
+            ...$this->settingsRules(),
         ];
     }
 }

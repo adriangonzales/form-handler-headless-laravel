@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Concerns\FormSettingsValidationRules;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Gate;
 
 class FormUpdateRequest extends FormRequest
 {
+    use FormSettingsValidationRules;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -30,7 +33,7 @@ class FormUpdateRequest extends FormRequest
             'name' => ['required', 'string', 'max:400'],
             'active' => ['required'],
             'schema' => ['nullable', 'array'],
-            'settings' => ['nullable', 'array'],
+            ...$this->settingsRules(),
         ];
     }
 }
