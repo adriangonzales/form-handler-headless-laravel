@@ -27,8 +27,8 @@ class FormUpdateRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:400'],
             'active' => ['required'],
-            'schema' => ['nullable', 'json'],
-            'settings' => ['nullable', 'json'],
+            'schema' => ['nullable', 'array'],
+            'settings' => ['nullable', 'array'],
         ];
     }
 }

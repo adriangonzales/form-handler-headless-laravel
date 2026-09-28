@@ -74,15 +74,20 @@ it('creates a new form', function (): void {
     $this->actingAs($user);
 
     $name = fake()->name();
-    $schema = [];
-    $settings = [];
+    $schema = [
+        'email' => [
+            'label' => 'Email',
+            'rules' => ['required', 'email'],
+        ],
+    ];
+    $settings = ['redirect' => fake()->url()];
 
     Event::fake();
 
-    $response = $this->post(route('forms.store'), [
+    $response = $this->postJson(route('forms.store'), [
         'name' => $name,
-        'schema' => json_encode($schema),
-        'settings' => json_encode($settings),
+        'schema' => $schema,
+        'settings' => $settings,
     ]);
 
     $response->assertCreated();
@@ -94,6 +99,8 @@ it('creates a new form', function (): void {
 
     $this->assertCount(1, $forms);
     $form = $forms->first();
+    $this->assertSame($schema, $form->schema);
+    $this->assertSame($settings, $form->settings);
 
     Event::assertDispatched(FormCreated::class, function ($event) use ($form) {
         return $event->form->is($form);

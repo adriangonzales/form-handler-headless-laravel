@@ -26,8 +26,8 @@ class FormStoreRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:400'],
-            'schema' => ['nullable', 'json'],
-            'settings' => ['nullable', 'json'],
+            'schema' => ['nullable', 'array'],
+            'settings' => ['nullable', 'array'],
         ];
     }
 }
