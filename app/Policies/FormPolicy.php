@@ -45,6 +45,16 @@ class FormPolicy
     }
 
     /**
+     * Determine whether an entry can be submitted to the form.
+     */
+    public function submit(?User $user, Form $form): Response
+    {
+        return $form->active
+            ? Response::allow()
+            : Response::deny('This form is not accepting submissions.');
+    }
+
+    /**
      * Determine whether the user can delete the model.
      */
     public function delete(User $user, Form $form): Response

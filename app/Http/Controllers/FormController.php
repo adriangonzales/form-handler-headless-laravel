@@ -9,6 +9,7 @@ use App\Http\Resources\FormCollection;
 use App\Http\Resources\FormResource;
 use App\Models\Form;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class FormController extends Controller
 {
@@ -23,6 +24,8 @@ class FormController extends Controller
 
     public function show(Form $form): FormResource
     {
+        Gate::authorize('view', $form);
+
         return new FormResource($form);
     }
 

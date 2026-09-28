@@ -8,7 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Event;
 
 it('requires authentication to view the form index', function (): void {
-    $response = $this->get('/api/v1/forms');
+    $response = $this->getJson('/api/v1/forms');
     $response->assertUnauthorized();
 });
 
@@ -21,7 +21,7 @@ it('lists results from the index', function (): void {
 
     $this->actingAs($user);
 
-    $response = $this->get('/api/v1/forms');
+    $response = $this->getJson('/api/v1/forms');
 
     $response->assertOk();
     $response->assertJsonStructure([
@@ -52,9 +52,9 @@ it('shows details of a form', function (): void {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $form = $user->forms()->getModel()->factory()->create();
+    $form = Form::factory()->create(['user_id' => $user->id]);
 
-    $response = $this->get(route('forms.show', $form));
+    $response = $this->getJson(route('forms.show', $form));
 
     $response->assertOk();
     $response->assertJson([
@@ -67,6 +67,17 @@ it('shows details of a form', function (): void {
             'settings' => $form->settings,
         ],
     ]);
+});
+
+it('forbids viewing a form owned by another user', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    $form = Form::factory()->create();
+
+    $response = $this->getJson(route('forms.show', $form));
+
+    $response->assertForbidden();
+    $response->assertJson(['message' => 'You do not own this form.']);
 });
 
 it('creates a new form', function (): void {
@@ -107,6 +118,18 @@ it('creates a new form', function (): void {
     });
 });
 
+it('rejects a JSON string schema when creating a form', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    $response = $this->postJson(route('forms.store'), [
+        'name' => fake()->name(),
+        'schema' => json_encode(['email' => ['label' => 'Email']]),
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors('schema');
+});
+
 it('updates a form', function (): void {
     $user = User::factory()->create();
     $this->actingAs($user);
@@ -116,7 +139,7 @@ it('updates a form', function (): void {
     $name = fake()->name();
     $active = fake()->boolean();
 
-    $response = $this->put(route('forms.update', $form), [
+    $response = $this->putJson(route('forms.update', $form), [
         'name' => $name,
         'active' => $active,
     ]);
@@ -135,4 +158,20 @@ it('updates a form', function (): void {
     $this->assertEquals($user->id, $form->user_id);
     $this->assertEquals($name, $form->name);
     $this->assertEquals($active, $form->active);
+});
+
+it('forbids updating a form owned by another user', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    $form = Form::factory()->create();
+    $originalName = $form->name;
+
+    $response = $this->putJson(route('forms.update', $form), [
+        'name' => fake()->name(),
+        'active' => true,
+    ]);
+
+    $response->assertForbidden();
+    $response->assertJson(['message' => 'You do not own this form.']);
+    $this->assertSame($originalName, $form->refresh()->name);
 });

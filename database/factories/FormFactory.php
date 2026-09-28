@@ -63,6 +63,26 @@ class FormFactory extends Factory
     }
 
     /**
+     * Indicate that the form is accepting submissions.
+     */
+    public function active(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'active' => true,
+        ]);
+    }
+
+    /**
+     * Indicate that the form is not accepting submissions.
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'active' => false,
+        ]);
+    }
+
+    /**
      * Indicate that the form should have a basic schema
      */
     public function withBasicSchema(): static

@@ -86,6 +86,7 @@ it('shows single form entry', function (): void {
 
 it('creates a new form entry', function (): void {
     $this->actingAs($this->user);
+    $this->form->update(['active' => true]);
 
     $name = fake()->name();
 
@@ -122,7 +123,24 @@ it('creates a new form entry', function (): void {
     });
 });
 
+it('rejects entries for an inactive form', function (): void {
+    $this->actingAs($this->user);
+    $form = Form::factory()->inactive()->withBasicSchema()->create(['user_id' => $this->user->id]);
+
+    Event::fake();
+
+    $response = $this->postJson(route('forms.entries.store', $form), []);
+
+    $response->assertForbidden();
+    $response->assertJson(['message' => 'This form is not accepting submissions.']);
+    $this->assertSame(0, $form->entries()->count());
+    Event::assertNotDispatched(FormEntryCreated::class);
+});
+
 todo('Test that form and entry IDs match');
 todo('Test marking as starred');
 todo('Test marking as read');
 todo('Test marking as unread');
+todo('Test soft delete');
+todo('Test restore');
+todo('Test hard delete');
