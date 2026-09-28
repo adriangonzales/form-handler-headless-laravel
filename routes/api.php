@@ -7,7 +7,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
-        Route::apiResource('forms', FormController::class)->only('index', 'show', 'store', 'update');
+        Route::apiResource('forms', FormController::class)->only('index', 'show', 'store', 'update', 'destroy');
+        Route::post('forms/{form}/restore', [FormController::class, 'restore'])
+            ->withTrashed()
+            ->name('forms.restore');
+        Route::post('forms/{form}/duplicate', [FormController::class, 'duplicate'])
+            ->name('forms.duplicate');
         Route::apiResource('forms.entries', FormEntryController::class)
             ->only('index', 'show', 'store', 'update')
             ->shallow();

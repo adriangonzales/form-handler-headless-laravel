@@ -175,3 +175,110 @@ it('forbids updating a form owned by another user', function (): void {
     $response->assertJson(['message' => 'You do not own this form.']);
     $this->assertSame($originalName, $form->refresh()->name);
 });
+
+it('soft deletes a form', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $form = Form::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->deleteJson(route('forms.destroy', $form));
+
+    $response->assertNoContent();
+    $this->assertSoftDeleted($form);
+    $this->getJson(route('forms.show', $form))->assertNotFound();
+});
+
+it('forbids deleting a form owned by another user', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    $form = Form::factory()->create();
+
+    $response = $this->deleteJson(route('forms.destroy', $form));
+
+    $response->assertForbidden();
+    $response->assertJson(['message' => 'You do not own this form.']);
+    $this->assertNotSoftDeleted($form);
+});
+
+it('restores a soft deleted form', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $form = Form::factory()->create(['user_id' => $user->id]);
+    $form->delete();
+
+    $response = $this->postJson(route('forms.restore', $form));
+
+    $response->assertOk();
+    $response->assertJson(['data' => ['id' => $form->id]]);
+    $this->assertNotSoftDeleted($form);
+});
+
+it('forbids restoring a form owned by another user', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    $form = Form::factory()->create();
+    $form->delete();
+
+    $response = $this->postJson(route('forms.restore', $form));
+
+    $response->assertForbidden();
+    $this->assertSoftDeleted($form);
+});
+
+it('duplicates a form as a new inactive form', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $form = Form::factory()->active()->withBasicSchema()->create([
+        'user_id' => $user->id,
+        'name' => 'Contact Form',
+        'settings' => ['redirect' => 'https://example.com/thanks'],
+    ]);
+
+    Event::fake();
+
+    $response = $this->postJson(route('forms.duplicate', $form));
+
+    $response->assertCreated();
+    $copy = Form::query()->whereKeyNot($form->id)->sole();
+    $response->assertJson([
+        'data' => [
+            'id' => $copy->id,
+            'user_id' => $user->id,
+            'name' => 'Contact Form (copy)',
+            'active' => false,
+            'schema' => $form->schema,
+            'settings' => $form->settings->toArray(),
+        ],
+    ]);
+
+    Event::assertDispatched(FormCreated::class, fn (FormCreated $event): bool => $event->form->is($copy));
+});
+
+it('keeps a duplicated form name within the length limit', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $form = Form::factory()->create(['user_id' => $user->id, 'name' => str_repeat('a', 400)]);
+
+    $response = $this->postJson(route('forms.duplicate', $form));
+
+    $response->assertCreated();
+    expect($response->json('data.name'))
+        ->toHaveLength(400)
+        ->toEndWith(' (copy)');
+});
+
+it('forbids duplicating a form owned by another user', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    $form = Form::factory()->create();
+
+    $response = $this->postJson(route('forms.duplicate', $form));
+
+    $response->assertForbidden();
+    $this->assertSame(1, Form::query()->count());
+});
+

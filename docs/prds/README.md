@@ -28,7 +28,7 @@ User (account holder)
 
 - **Stack:** Laravel 13, PHP 8.4, Fortify (web auth), Sanctum (API auth), Inertia v3 + React 19 (web UI), Pest (tests).
 - **Identifiers:** Forms, entries and notifications use ULIDs. Users use auto-increment integers.
-- **Deletion:** All three form-domain tables support soft deletes, but no delete endpoints are exposed.
+- **Deletion:** All three form-domain tables support soft deletes. Forms can be deleted and restored through the API; entries and notifications cannot.
 - **API base path:** `/api/v1`, all routes behind `auth:sanctum`.
 - **Scaffolding source:** The domain was generated from `draft.yaml` (Laravel Blueprint) and then hand-edited; the YAML is no longer an exact match for the code.
 
@@ -36,14 +36,14 @@ User (account holder)
 
 | Capability | Status |
 | --- | --- |
-| Form CRUD (list, show, create, update) | Built |
+| Form CRUD (list, show, create, update, delete, restore, duplicate) | Built |
 | Schema-driven submission validation | Built |
 | Entry list / show / update | Built, not scoped to owner |
 | Public (unauthenticated) submissions | **Not built.** Submission requires an API token |
 | Ownership authorization | Enforced on form show/update. **Not enforced** on entries or notifications |
 | Notifications on new entry | **Not built.** Recipients can be stored; nothing is sent |
 | Spam detection, IP geolocation, UA parsing | **Not built.** Columns exist, placeholders only |
-| Delete / restore via API | Not built |
+| Delete / restore / duplicate via API | Built for forms. Not built for entries or notifications |
 | Form-management web UI | Not built (dashboard is a placeholder) |
 | Self-service registration | Disabled |
 

@@ -67,9 +67,11 @@ class FormPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, Form $form): bool
+    public function restore(User $user, Form $form): Response
     {
-        return false;
+        return $user->id === $form->user_id
+            ? Response::allow()
+            : Response::deny('You do not own this form.');
     }
 
     /**
