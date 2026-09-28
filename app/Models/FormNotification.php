@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\FormNotificationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,7 +19,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 ])]
 class FormNotification extends Model
 {
+    /** @use HasFactory<FormNotificationFactory> */
     use HasFactory;
+
     use HasUlids;
     use SoftDeletes;
 
@@ -37,12 +40,15 @@ class FormNotification extends Model
     /**
      * The model's default values for attributes.
      *
-     * @var array
+     * @var array<string, mixed>
      */
     protected $attributes = [
         'enabled' => false,
     ];
 
+    /**
+     * @return BelongsTo<Form, $this>
+     */
     public function form(): BelongsTo
     {
         return $this->belongsTo(Form::class);

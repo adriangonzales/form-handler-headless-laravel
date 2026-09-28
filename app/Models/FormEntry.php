@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\FormEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,6 +10,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property array<string, mixed>|null $data
+ */
 #[Fillable([
     'form_id',
     'data',
@@ -25,7 +29,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 ])]
 class FormEntry extends Model
 {
+    /** @use HasFactory<FormEntryFactory> */
     use HasFactory;
+
     use HasUlids;
     use SoftDeletes;
 
@@ -48,7 +54,7 @@ class FormEntry extends Model
     /**
      * The model's default values for attributes.
      *
-     * @var array
+     * @var array<string, mixed>
      */
     protected $attributes = [
         'spam' => false,
@@ -56,6 +62,9 @@ class FormEntry extends Model
         'starred' => 0,
     ];
 
+    /**
+     * @return BelongsTo<Form, $this>
+     */
     public function form(): BelongsTo
     {
         return $this->belongsTo(Form::class);

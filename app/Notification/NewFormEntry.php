@@ -23,6 +23,8 @@ class NewFormEntry extends Notification implements ShouldQueue
 
     /**
      * Get the notification's delivery channels.
+     *
+     * @return array<int, string>
      */
     public function via(mixed $notifiable): array
     {
@@ -42,6 +44,8 @@ class NewFormEntry extends Notification implements ShouldQueue
 
     /**
      * Get the array representation of the notification.
+     *
+     * @return array<string, mixed>
      */
     public function toArray(mixed $notifiable): array
     {

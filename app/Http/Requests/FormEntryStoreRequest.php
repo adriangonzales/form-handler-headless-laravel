@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Actions\Forms\BuildValidationRules;
 use App\Models\Form;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class FormEntryStoreRequest extends FormRequest
@@ -20,11 +21,16 @@ class FormEntryStoreRequest extends FormRequest
 
     /**
      * Get the validation rules that apply to the request.
+     *
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        /** @param Form **/
         $form = $this->route('form');
+
+        if (! $form instanceof Form) {
+            abort(404);
+        }
 
         return (new BuildValidationRules)($form);
     }

@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Models\Form;
+use App\Models\FormNotification;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<FormNotification>
+ */
 class FormNotificationFactory extends Factory
 {
     /**

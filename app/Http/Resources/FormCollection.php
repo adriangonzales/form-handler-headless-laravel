@@ -11,6 +11,8 @@ class FormCollection extends ResourceCollection
 {
     /**
      * Transform the resource collection into an array.
+     *
+     * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {

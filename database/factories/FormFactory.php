@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Models\Form;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
+/**
+ * @extends Factory<Form>
+ */
 class FormFactory extends Factory
 {
     /**
@@ -59,9 +63,9 @@ class FormFactory extends Factory
     }
 
     /**
-     * Indicate that the user is suspended.
+     * Indicate that the form should have a basic schema
      */
-    public function basicSchema(): Factory
+    public function withBasicSchema(): static
     {
         return $this->state(function (array $attributes) {
             return [

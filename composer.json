@@ -73,7 +73,7 @@
             "@test"
         ],
         "types:check": [
-            "phpstan analyse"
+            "phpstan analyse --memory-limit=2G"
         ],
         "rector": [
             "@php ./vendor/bin/rector process --dry-run"

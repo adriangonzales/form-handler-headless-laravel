@@ -4,34 +4,26 @@ namespace App\Actions\Forms;
 
 use App\Models\Form;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 
 class BuildValidationRules
 {
+    /**
+     * Build validation rules from the form's schema, keyed by field name.
+     *
+     * @return array<string, list<string>>
+     */
     public function __invoke(Form $form, ?Request $request = null): array
     {
         $rules = [];
 
-        // Build validation rules from Form Settings
-        foreach ($form->schema as $fieldName => $fieldSettings) {
-            $fieldRules = [];
+        foreach ($form->schema ?? [] as $fieldName => $fieldSettings) {
+            $fieldRules = $fieldSettings['rules'] ?? ['sometimes'];
 
-            if (Arr::has($fieldSettings, 'rules')) {
-                if (is_array($fieldSettings['rules'])) {
-                    foreach ($fieldSettings['rules'] as $value) {
-                        $fieldRules[] = $value;
-                    }
-                } else {
-                    foreach (Str::of($fieldSettings['rules'])->explode(',') as $stringRule) {
-                        $fieldRules[] = $stringRule;
-                    }
-                }
-            } else {
-                $fieldRules[] = 'sometimes';
+            if (is_string($fieldRules)) {
+                $fieldRules = explode(',', $fieldRules);
             }
 
-            $rules[Arr::get($fieldSettings, 'name', $fieldName)] = $fieldRules;
+            $rules[$fieldSettings['name'] ?? $fieldName] = $fieldRules;
         }
 
         return $rules;
