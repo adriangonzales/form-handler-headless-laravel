@@ -43,6 +43,9 @@ it('lists results from the index', function (): void {
                 'spam_reason',
                 'starred',
                 'read_at',
+                'created_at',
+                'updated_at',
+                'deleted_at',
             ],
         ],
         'links' => [
@@ -81,6 +84,9 @@ it('shows single form entry', function (): void {
         'spam_reason',
         'starred',
         'read_at',
+        'created_at',
+        'updated_at',
+        'deleted_at',
     ]);
 });
 
@@ -135,6 +141,22 @@ it('rejects entries for an inactive form', function (): void {
     $response->assertJson(['message' => 'This form is not accepting submissions.']);
     $this->assertSame(0, $form->entries()->count());
     Event::assertNotDispatched(FormEntryCreated::class);
+});
+
+it('includes timestamps in the form entry resource', function (): void {
+    $this->actingAs($this->user);
+
+    $this->travelTo('2026-01-02 03:04:05');
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+
+    $response = $this->getJson(route('entries.show', $entry));
+
+    $response->assertOk();
+    $response->assertJson([
+        'created_at' => '2026-01-02T03:04:05.000000Z',
+        'updated_at' => '2026-01-02T03:04:05.000000Z',
+        'deleted_at' => null,
+    ]);
 });
 
 todo('Test that form and entry IDs match');

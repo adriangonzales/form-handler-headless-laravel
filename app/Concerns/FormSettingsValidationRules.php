@@ -24,14 +24,14 @@ trait FormSettingsValidationRules
             ->implode(',');
 
         $rules = [
-            'settings' => ['nullable', 'array:' . $allowedKeys],
+            'settings' => ['nullable', 'array:'.$allowedKeys],
         ];
 
         $settings = $this->input('settings');
 
         if (is_array($settings)) {
             foreach (FormSettings::getValidationRules($settings) as $key => $settingRules) {
-                $rules['settings.' . $key] = $settingRules;
+                $rules['settings.'.$key] = $settingRules;
             }
         }
 

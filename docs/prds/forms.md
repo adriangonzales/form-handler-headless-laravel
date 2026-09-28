@@ -78,9 +78,9 @@ The factory's `withBasicSchema()` state and the tests use ULIDs as field IDs, bu
 
 ## 6. Functional requirements
 
-**FR-1 List forms.** `GET /api/v1/forms` returns the authenticated user's forms only, oldest first, paginated (Laravel default of 15 per page) with `links` and `meta`.
+**FR-1 List forms.** `GET /api/v1/forms` returns the authenticated user's forms only, paginated (Laravel default of 15 per page) with `links` and `meta`. The optional `sort` query parameter orders the list: `created_at` (oldest first, the default) or `-created_at` (newest first). Ties are broken by ID in the same direction. Any other value returns 422 on `sort`. Pagination links keep the `sort` parameter.
 
-**FR-2 Show a form.** `GET /api/v1/forms/{form}` returns `{ data: { id, user_id, name, active, schema, settings } }`. Only the owner may view a form; anyone else receives `403 {"message":"You do not own this form."}` (`FormPolicy::view`).
+**FR-2 Show a form.** `GET /api/v1/forms/{form}` returns `{ data: { id, user_id, name, active, schema, settings, created_at, updated_at, deleted_at } }`. `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` for any record the API can return. Only the owner may view a form; anyone else receives `403 {"message":"You do not own this form."}` (`FormPolicy::view`).
 
 **FR-3 Create a form.** `POST /api/v1/forms` accepts:
 
@@ -113,14 +113,14 @@ The form is created under the authenticated user, `active` defaults to `false`, 
 ## 8. Gaps
 
 - **Settings are stored but not yet acted on.** `redirect`, `timezone` and `domains` are validated and returned, but no submission, notification or display logic reads them yet. Each depends on other work: `redirect` and `domains` on a public submission endpoint ([Form Entries](form-entries.md)), `timezone` on notification delivery ([Form Notifications](form-notifications.md)).
-- **Resource omits timestamps** (`created_at`, `updated_at`), so clients cannot sort or display them.
+- **Sorting is limited to `created_at`.** There is no sorting by `name` or `updated_at`, and no filtering (e.g. by `active`).
 - **No web UI** for forms; the dashboard page is the starter-kit placeholder.
 
 ## 9. Known issues
 
 - **`name` override vs. display mapping.** Validation keys data by `name ?? fieldId`, but `MapFormData` looks values up by field ID. For any field that sets `name`, the mapped `data` will be `null`.
 - **Unvalidated rule strings.** Rules from the schema are passed straight to the validator. An invalid rule name causes a server error at submission time rather than a 422 at form-save time.
-- **Blueprint drift.** `draft.yaml` specifies `limit:10` and newest-first ordering; the code uses 15 per page, oldest first.
+- **Blueprint drift.** `draft.yaml` specifies `limit:10` and newest-first ordering; the code uses 15 per page, oldest first by default (newest first is available with `sort=-created_at`).
 
 ## 10. Open questions
 

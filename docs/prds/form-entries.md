@@ -64,7 +64,7 @@ Table `form_entries`:
 
 Returns the refreshed entry. This is the mechanism for starring, marking read/unread, and flagging spam.
 
-**FR-5 Response shape.** The entry resource returns `id, form_id, data, ip, ip_location_display, referer, user_agent, user_agent_display, spam, spam_score, spam_reason, starred, read_at`. Because the payload has its own `data` key, Laravel does **not** add the usual `{ "data": ... }` wrapper to single entries — unlike forms and notifications. `spam_score` is serialised as a string with 2 decimals; `read_at` as a Unix timestamp integer.
+**FR-5 Response shape.** The entry resource returns `id, form_id, data, ip, ip_location_display, referer, user_agent, user_agent_display, spam, spam_score, spam_reason, starred, read_at, created_at, updated_at, deleted_at`. Because the payload has its own `data` key, Laravel does **not** add the usual `{ "data": ... }` wrapper to single entries — unlike forms and notifications. `spam_score` is serialised as a string with 2 decimals; `read_at` as a Unix timestamp integer. `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` for any record the API can return.
 
 ## 6. Gaps
 
@@ -75,7 +75,6 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 - **No IP geolocation or user-agent parsing** for the `*_display` fields.
 - **No filtering or sorting** (unread, starred, spam, date range) and no newest-first option.
 - **No delete, bulk actions, or export.**
-- **Resource omits `created_at`**, so the submission time is not visible to clients.
 - Pending tests (`todo`): form/entry ID match, starring, marking read, marking unread.
 
 ## 7. Known issues
@@ -84,6 +83,7 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 - **Update allows rewriting submission metadata.** `data`, `ip`, `user_agent` and `referer` are editable, which undermines the audit trail.
 - **`data` validated as a JSON string on update** while the model casts it to an array, so updating `data` with a JSON object fails validation.
 - **Full-replacement semantics.** `spam_score` and `starred` are required on every update, so a client cannot PATCH just `read_at`.
+- **Mixed date formats.** `read_at` is serialised as a Unix integer (model cast `timestamp`) while `created_at`, `updated_at` and `deleted_at` are ISO 8601 strings.
 - **Precision mismatch.** Column is `decimal(4,3)` but the model casts to `decimal:2`.
 - **Undelivered alerts.** `NewFormEntry` mail and notification calls are commented out; see [Form Notifications](form-notifications.md).
 

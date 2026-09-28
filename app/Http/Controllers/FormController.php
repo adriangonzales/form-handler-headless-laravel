@@ -3,24 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Events\FormCreated;
+use App\Http\Requests\FormIndexRequest;
 use App\Http\Requests\FormStoreRequest;
 use App\Http\Requests\FormUpdateRequest;
 use App\Http\Resources\FormCollection;
 use App\Http\Resources\FormResource;
 use App\Models\Form;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 class FormController extends Controller
 {
-    public function index(Request $request): FormCollection
+    public function index(FormIndexRequest $request): FormCollection
     {
         $forms = $request->user()->forms()
-            ->oldest()
-            ->paginate();
+            ->orderBy($request->sortColumn(), $request->sortDirection())
+            ->orderBy('id', $request->sortDirection())
+            ->paginate()
+            ->withQueryString();
 
         return new FormCollection($forms);
     }

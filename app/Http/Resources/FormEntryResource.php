@@ -34,6 +34,9 @@ class FormEntryResource extends JsonResource
             'spam_reason' => $this->spam_reason,
             'starred' => $this->starred,
             'read_at' => $this->read_at,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+            'deleted_at' => $this->deleted_at,
         ];
     }
 }

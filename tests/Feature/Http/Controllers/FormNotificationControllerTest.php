@@ -34,6 +34,9 @@ it('lists results from the index', function (): void {
                 'value',
                 'enabled',
                 'error',
+                'created_at',
+                'updated_at',
+                'deleted_at',
             ],
         ],
         'links' => [
@@ -65,6 +68,9 @@ it('shows single form notification', function (): void {
             'value',
             'enabled',
             'error',
+            'created_at',
+            'updated_at',
+            'deleted_at',
         ],
     ]);
 });
@@ -96,4 +102,22 @@ it('creates a new form notification', function (): void {
 
     $this->assertCount(1, $formNotifications);
     $formNotification = $formNotifications->first();
+});
+
+it('includes timestamps in the form notification resource', function (): void {
+    $this->actingAs($this->user);
+
+    $this->travelTo('2026-01-02 03:04:05');
+    $formNotification = FormNotification::factory()->create(['form_id' => $this->form->id]);
+
+    $response = $this->getJson(route('notifications.show', $formNotification));
+
+    $response->assertOk();
+    $response->assertJson([
+        'data' => [
+            'created_at' => '2026-01-02T03:04:05.000000Z',
+            'updated_at' => '2026-01-02T03:04:05.000000Z',
+            'deleted_at' => null,
+        ],
+    ]);
 });

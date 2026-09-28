@@ -27,6 +27,9 @@ class FormResource extends JsonResource
             'active' => $this->active,
             'schema' => $this->schema,
             'settings' => $this->settings,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+            'deleted_at' => $this->deleted_at,
         ];
     }
 }

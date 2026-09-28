@@ -20,10 +20,10 @@ final class FormSettings extends Data
         #[Timezone]
         public ?string $timezone = null,
         public ?array $domains = [],
-        // CAPTCHA type (none, recaptcha, hcaptcha)
-        // CAPTCHA secret key
-        // HoneyPot Enabled
-        // HoneyPot Name
+        // TODO: CAPTCHA type (none, recaptcha, hcaptcha)
+        // TODO: CAPTCHA secret key
+        // TODO: HoneyPot Enabled
+        // TODO: HoneyPot Name
     ) {}
 
     /**

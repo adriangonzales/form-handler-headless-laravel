@@ -34,6 +34,9 @@ it('lists results from the index', function (): void {
                 'active',
                 'schema',
                 'settings',
+                'created_at',
+                'updated_at',
+                'deleted_at',
             ],
         ],
         'links' => [
@@ -363,3 +366,70 @@ it('validates settings when updating a form', function (): void {
     $response->assertUnprocessable();
     $response->assertJsonValidationErrors('settings.redirect');
 });
+
+it('includes timestamps in the form resource', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $this->travelTo('2026-01-02 03:04:05');
+    $form = Form::factory()->create(['user_id' => $user->id]);
+
+    $this->travelTo('2026-02-03 04:05:06');
+    $form->touch();
+
+    $response = $this->getJson(route('forms.show', $form));
+
+    $response->assertOk();
+    $response->assertJson([
+        'data' => [
+            'created_at' => '2026-01-02T03:04:05.000000Z',
+            'updated_at' => '2026-02-03T04:05:06.000000Z',
+            'deleted_at' => null,
+        ],
+    ]);
+});
+
+it('sorts the form index by created_at', function (?string $sort, array $expectedOrder): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $forms = collect(['2026-01-01', '2026-03-01', '2026-02-01'])
+        ->map(function (string $date) use ($user): Form {
+            $this->travelTo($date);
+
+            return Form::factory()->create(['user_id' => $user->id]);
+        });
+
+    $response = $this->getJson(route('forms.index', array_filter(['sort' => $sort])));
+
+    $response->assertOk();
+
+    expect($response->json('data.*.id'))
+        ->toBe(array_map(fn (int $index): string => $forms[$index]->id, $expectedOrder));
+})->with([
+    'default is oldest first' => [null, [0, 2, 1]],
+    'ascending' => ['created_at', [0, 2, 1]],
+    'descending' => ['-created_at', [1, 2, 0]],
+]);
+
+it('keeps the sort in pagination links', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Form::factory()->count(16)->create(['user_id' => $user->id]);
+
+    $response = $this->getJson(route('forms.index', ['sort' => '-created_at']));
+
+    $response->assertOk();
+
+    expect($response->json('links.next'))->toContain('sort=-created_at');
+});
+
+it('rejects an unsupported sort', function (string $sort): void {
+    $this->actingAs(User::factory()->create());
+
+    $response = $this->getJson(route('forms.index', ['sort' => $sort]));
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors('sort');
+})->with(['name', 'updated_at', 'created_at,-created_at', '--created_at']);

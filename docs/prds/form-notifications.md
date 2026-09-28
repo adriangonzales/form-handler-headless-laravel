@@ -35,7 +35,7 @@ Table `form_notifications`:
 
 **FR-1 List recipients.** `GET /api/v1/forms/{form}/notifications` returns the form's recipients, paginated (15 per page), with `links` and `meta`.
 
-**FR-2 Show a recipient.** `GET /api/v1/notifications/{notification}` (shallow route) returns `{ data: { id, form_id, type, value, enabled, error } }`.
+**FR-2 Show a recipient.** `GET /api/v1/notifications/{notification}` (shallow route) returns `{ data: { id, form_id, type, value, enabled, error, created_at, updated_at, deleted_at } }`. `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` for any record the API can return.
 
 **FR-3 Add a recipient.** `POST /api/v1/forms/{form}/notifications` accepts:
 
