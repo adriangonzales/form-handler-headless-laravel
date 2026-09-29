@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Forms\DuplicateForm;
 use App\Events\FormCreated;
 use App\Http\Requests\FormIndexRequest;
 use App\Http\Requests\FormStoreRequest;
@@ -12,7 +13,6 @@ use App\Models\Form;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 
 class FormController extends Controller
 {
@@ -71,17 +71,11 @@ class FormController extends Controller
     /**
      * Copy a form's name, schema, and settings into a new, inactive form.
      */
-    public function duplicate(Form $form): JsonResponse
+    public function duplicate(Form $form, DuplicateForm $duplicateForm): JsonResponse
     {
         Gate::authorize('view', $form);
 
-        $copy = $form->replicate()->fill([
-            'name' => Str::limit($form->name, 393, '').' (copy)',
-            'active' => false,
-        ]);
-        $copy->save();
-
-        event(new FormCreated($copy));
+        $copy = $duplicateForm($form);
 
         return (new FormResource($copy))->response()->setStatusCode(201);
     }
