@@ -8,7 +8,7 @@ A Form is the central object of the product. An account holder creates a form, d
 
 ## 2. Users
 
-- **Account holder / developer** — authenticates with a Sanctum token, creates forms, and wires the form ID into a website or app.
+- **Account holder / developer** — authenticates with a JWT ([Accounts & Authentication](accounts-and-authentication.md)), creates forms, and wires the form ID into a website or app.
 
 ## 3. Goals
 
@@ -106,6 +106,7 @@ The form is created under the authenticated user, `active` defaults to `false`, 
 
 **FR-10 Duplicate a form.** `POST /api/v1/forms/{form}/duplicate` creates a new form owned by the same user, with the same `schema` and `settings`, the name suffixed with ` (copy)` (the original is truncated if needed to stay within 400 characters), and `active = false`. Entries and notification recipients are not copied. Dispatches `FormCreated` and returns `201` with the new form. Owner only (`FormPolicy::view`).
 
+
 ## 7. Events
 
 - `FormCreated(Form $form)` — dispatched after create and after duplicate. No listeners are registered.
@@ -114,7 +115,6 @@ The form is created under the authenticated user, `active` defaults to `false`, 
 
 - **Settings are stored but not yet acted on.** `redirect`, `timezone` and `domains` are validated and returned, but no submission, notification or display logic reads them yet. Each depends on other work: `redirect` and `domains` on a public submission endpoint ([Form Entries](form-entries.md)), `timezone` on notification delivery ([Form Notifications](form-notifications.md)).
 - **Sorting is limited to `created_at`.** There is no sorting by `name` or `updated_at`, and no filtering (e.g. by `active`).
-- **No web UI** for forms; the dashboard page is the starter-kit placeholder.
 
 ## 9. Known issues
 

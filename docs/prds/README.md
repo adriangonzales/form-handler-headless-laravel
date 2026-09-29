@@ -6,7 +6,7 @@ These documents describe the system **as it is currently built** (as of 2026-09-
 
 The Headless Form Handler is a backend service that lets an account holder define forms, receive submissions ("entries") for those forms over a JSON API, and configure who should be notified when a submission arrives. The forms themselves are rendered elsewhere (a website, a static site, a mobile app); this service only stores form definitions, validates and stores submitted data, and exposes it back through the API.
 
-A small Inertia/React web app ships alongside the API for account management (login, profile, password, 2FA, passkeys, appearance). It does not yet contain any form-management UI.
+The service is headless: there is no web interface. Account holders authenticate against the API with JSON Web Tokens.
 
 ## Documents
 
@@ -15,7 +15,7 @@ A small Inertia/React web app ships alongside the API for account management (lo
 | [Forms](forms.md)                                           | Creating and managing form definitions, the field schema, and settings                    |
 | [Form Entries](form-entries.md)                             | Accepting submissions, validation against the schema, captured metadata, triaging entries |
 | [Form Notifications](form-notifications.md)                 | Per-form email/SMS notification recipients and new-entry alerts                           |
-| [Accounts & Authentication](accounts-and-authentication.md) | Web login, API authentication, account settings, security features                        |
+| [Accounts & Authentication](accounts-and-authentication.md) | JWT login, refresh, logout and current-user endpoints |
 
 ## System at a glance
 
@@ -26,26 +26,25 @@ User (account holder)
       └── FormNotification  email/sms recipient, enabled flag
 ```
 
-- **Stack:** Laravel 13, PHP 8.4, Fortify (web auth), Sanctum (API auth), Inertia v3 + React 19 (web UI), Pest (tests).
+- **Stack:** Laravel 13, PHP 8.4, `tymon/jwt-auth` (API auth), `spatie/laravel-data` (settings), Pest (tests).
 - **Identifiers:** Forms, entries and notifications use ULIDs. Users use auto-increment integers.
 - **Deletion:** All three form-domain tables support soft deletes. Forms can be deleted and restored through the API; entries and notifications cannot.
-- **API base path:** `/api/v1`, all routes behind `auth:sanctum`.
+- **API base path:** `/api/v1`. Everything except `auth/login` and `auth/refresh` requires a JWT bearer token (`auth:api`).
 - **Scaffolding source:** The domain was generated from `draft.yaml` (Laravel Blueprint) and then hand-edited; the YAML is no longer an exact match for the code.
 
 ## Cross-cutting status
 
-| Capability                                                         | Status                                                                     |
-| ------------------------------------------------------------------ | -------------------------------------------------------------------------- |
-| Form CRUD (list, show, create, update, delete, restore, duplicate) | Built                                                                      |
-| Schema-driven submission validation                                | Built                                                                      |
-| Entry list / show / update                                         | Built, not scoped to owner                                                 |
-| Public (unauthenticated) submissions                               | **Not built.** Submission requires an API token                            |
-| Ownership authorization                                            | Enforced on form show/update. **Not enforced** on entries or notifications |
-| Notifications on new entry                                         | **Not built.** Recipients can be stored; nothing is sent                   |
-| Spam detection, IP geolocation, UA parsing                         | **Not built.** Columns exist, placeholders only                            |
-| Delete / restore / duplicate via API                               | Built for forms. Not built for entries or notifications                    |
-| Form-management web UI                                             | Not built (dashboard is a placeholder)                                     |
-| Self-service registration                                          | Disabled                                                                   |
+| Capability                                                         | Status                                                                                |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| Form CRUD (list, show, create, update, delete, restore, duplicate) | Built                                                                                 |
+| Schema-driven submission validation                                | Built                                                                                 |
+| Entry list / show / update                                         | Built, not scoped to owner                                                            |
+| Public (unauthenticated) submissions                               | **Not built.** Submission requires an API token                                       |
+| Ownership authorization                                            | Enforced on form show/update. **Not enforced** on entries or notifications            |
+| Notifications on new entry                                         | **Not built.** Recipients can be stored; nothing is sent                              |
+| Spam detection, IP geolocation, UA parsing                         | **Not built.** Columns exist, placeholders only                                       |
+| Delete / restore / duplicate via API                               | Built for forms. Not built for entries or notifications                               |
+| Self-service registration                                          | Disabled                                                                              |
 
 ## Conventions used in these PRDs
 

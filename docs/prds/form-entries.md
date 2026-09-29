@@ -40,7 +40,7 @@ Table `form_entries`:
 
 ## 5. Functional requirements
 
-**FR-1 Submit an entry.** `POST /api/v1/forms/{form}/entries` (Sanctum-authenticated).
+**FR-1 Submit an entry.** `POST /api/v1/forms/{form}/entries` (JWT-authenticated).
 
 - The form must be active; otherwise the request is rejected with `403 {"message":"This form is not accepting submissions."}` before validation.
 - Request fields are validated with the rules built from the form's schema (see [Forms FR-5](forms.md)). Failures return 422 with per-field errors.
@@ -69,7 +69,7 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 
 ## 6. Gaps
 
-- **No public submission endpoint.** The store route is behind `auth:sanctum`, so a browser form cannot post to it without exposing a token. The controller has a TODO to split out an inbound, public-facing endpoint. This is the most significant gap for a "headless form handler".
+- **No public submission endpoint.** The store route is behind `auth:api`, so a browser form cannot post to it without exposing an account's JWT. The controller has a TODO to split out an inbound, public-facing endpoint. This is the most significant gap for a "headless form handler".
 - **Entries are not scoped to their form.** The index endpoint ignores `{form}` and returns entries from _every_ form in the system.
 - **No ownership checks** on list, show, or update — any authenticated user can read or edit any entry.
 - **No spam protection** (captcha, honeypot, rate limiting on submissions). Placeholders only.

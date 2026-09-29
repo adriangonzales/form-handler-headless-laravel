@@ -1,73 +1,65 @@
 # PRD: Accounts & Authentication
 
-**Status:** Built (from the Laravel React starter kit) · **Owner area:** Fortify, Sanctum, `Settings\ProfileController`, `Settings\SecurityController`, `resources/js/pages`
+**Status:** Built (JWT API only) · **Owner area:** `AuthController`, `LoginRequest`, `UserResource`, `tymon/jwt-auth`, `config/auth.php`, `config/jwt.php`
 
 ## 1. Summary
 
-The system has two entry points for account holders: a session-based web app (Inertia + React) for signing in and managing their account, and a token-based JSON API (Sanctum) for managing forms, entries, and notifications. Authentication is provided by Laravel Fortify with password, two-factor, and passkey support.
+The system is a headless JSON API; there is no web interface. Account holders authenticate by exchanging their email and password for a JSON Web Token (JWT) and send it as a bearer token on every API request. Tokens are short-lived and can be refreshed for a longer window. Authentication uses [`tymon/jwt-auth`](https://github.com/tymondesigns/jwt-auth) through an `api` guard with the `jwt` driver, which is the application's default guard.
 
 ## 2. Users
 
-- **Account holder** — owns forms and signs in to the web app and/or calls the API.
-- **Operator / admin** — creates accounts (there is no self-service sign-up).
+- **Account holder**: owns forms and calls the API with a JWT.
+- **Operator / admin**: creates accounts. There is no self-service sign-up.
 
-## 3. Web application
+## 3. Endpoints
 
-### Pages
+All under `/api/v1/auth`.
 
-| Route                                                   | Page                                                                   | Access        |
-| ------------------------------------------------------- | ---------------------------------------------------------------------- | ------------- |
-| `/`                                                     | Welcome                                                                | Public        |
-| `/login`, `/forgot-password`, `/reset-password/{token}` | Auth pages                                                             | Guest         |
-| `/two-factor-challenge`                                 | 2FA code / recovery code entry                                         | Mid-login     |
-| `/user/confirm-password`                                | Password confirmation                                                  | Authenticated |
-| `/dashboard`                                            | Dashboard (placeholder content)                                        | Authenticated |
-| `/settings/profile`                                     | Name and email; delete account                                         | Authenticated |
-| `/settings/security`                                    | Change password, 2FA, passkeys (requires recent password confirmation) | Authenticated |
-| `/settings/appearance`                                  | Light / dark / system theme                                            | Authenticated |
+| Method | Path       | Auth required          | Purpose                                 |
+| ------ | ---------- | ---------------------- | --------------------------------------- |
+| POST   | `/login`   | No                     | Exchange email and password for a token |
+| POST   | `/refresh` | Token (may be expired) | Exchange a token for a new one          |
+| POST   | `/logout`  | Yes                    | Invalidate the current token            |
+| GET    | `/me`      | Yes                    | The authenticated user                  |
 
-### Functional requirements
+## 4. Functional requirements
 
-**FR-1 Sign in** with email and password. Emails are lowercased. Throttled to 5 attempts per minute per email + IP.
+**FR-1 Log in.** `POST /api/v1/auth/login` with `email` (required, email) and `password` (required, string). The email is matched case-insensitively. On success it returns:
 
-**FR-2 Password reset** by emailed link.
+```json
+{ "access_token": "<jwt>", "token_type": "bearer", "expires_in": 3600 }
+```
 
-**FR-3 Two-factor authentication (TOTP).** Enabling requires password confirmation and confirming a code; recovery codes are provided. The 2FA challenge is throttled to 5 per minute per login session.
+`expires_in` is in seconds and follows `JWT_TTL` (minutes, default 60). Wrong credentials return 422 with `errors.email = ["These credentials do not match our records."]`.
 
-**FR-4 Passkeys (WebAuthn).** Users can register, name, and remove passkeys and sign in with them. Management requires password confirmation. Passkey attempts are throttled to 10 per minute. A `/.well-known/passkey-endpoints` document points password managers at the security page.
+**FR-2 Login throttling.** After 5 failed attempts for the same email and IP address, further attempts return 429 with an `errors.email` message saying how many seconds remain, until the minute window passes. A successful login clears the counter.
 
-**FR-5 Profile.** Users can update name and email. Changing email clears `email_verified_at`. Users can delete their account after confirming their password.
+**FR-3 Authenticated requests.** Every `/api/v1` route other than login and refresh requires `Authorization: Bearer <token>`. A missing, malformed, expired or invalidated token returns `401 {"message":"Unauthenticated."}`. All responses, including errors, are JSON. Guests are never redirected.
 
-**FR-6 Password change** from the security page, throttled to 6 per minute.
+**FR-4 Refresh.** `POST /api/v1/auth/refresh` with the current token, which may already be expired, returns a new token in the FR-1 shape. The old token is blacklisted. The refresh window is measured from the **original login**: a refreshed token keeps the first token's issued-at (`iat`) claim, so a chain of refreshes ends `JWT_REFRESH_TTL` minutes (default 20160 = 14 days) after login and the user must log in again. After that, or without a valid token, refresh returns 401.
 
-**FR-7 Password policy.** In production, passwords must be at least 12 characters with mixed case, letters, numbers, symbols, and must not appear in known breaches. Outside production, Laravel defaults apply.
+**FR-5 Log out.** `POST /api/v1/auth/logout` blacklists the current token and returns 204.
 
-**FR-8 Appearance.** Theme choice is stored in an unencrypted `appearance` cookie and applied server-side to avoid a flash of the wrong theme.
+**FR-6 Current user.** `GET /api/v1/auth/me` returns `{ "data": { id, name, email, email_verified_at, created_at, updated_at } }`. The password and remember token are never exposed.
 
-## 4. API authentication
-
-**FR-9** All `/api/v1/*` routes require `auth:sanctum`. Clients authenticate with a personal access token (Bearer) or, from configured first-party domains, with the web session cookie.
-
-**FR-10** Unauthenticated API requests receive `401` JSON. All `api/*` errors render as JSON.
-
-**FR-11** Tokens do not expire (`sanctum.expiration = null`).
+**FR-7 Configuration.** `JWT_SECRET` signs tokens (HS256). `composer setup` generates one with `php artisan jwt:secret`. Tests use a fixed secret from `phpunit.xml`.
 
 ## 5. Gaps
 
-- **No way to obtain an API token.** `HasApiTokens` is on the user, but there is no UI or endpoint to create, list, or revoke tokens. Tokens can only be minted from code or tinker.
-- **No self-service registration.** Fortify's registration feature is disabled; accounts are created by seeding or manually.
-- **Email verification is not enforced.** Routes use the `verified` middleware, but `User` does not implement `MustVerifyEmail`, so it always passes.
-- **No teams or shared access.** A form belongs to exactly one user.
-- **No token abilities/scopes** to limit what a token can do (e.g. submit-only).
-- **Deleting an account that owns forms** is unhandled: `forms.user_id` has a foreign key with no `ON DELETE` action and nothing deletes the user's forms first, so the delete will be rejected by the database (or leave orphaned forms where FK checks are off).
+- **No account management endpoints.** There is no registration, password reset, password change, profile update or account deletion. Accounts are created by seeding or manually.
+- **No email verification.** `email_verified_at` is stored and returned but never checked.
+- **No multi-factor authentication.** Two-factor authentication and passkeys were removed with the web app.
+- **No "log out everywhere".** Only the presented token is invalidated. Other tokens stay valid until they expire.
+- **No token scopes.** Every token has full access to the owner's data.
+- **The blacklist depends on the cache.** Logged-out and refreshed tokens are recorded in the cache store. Clearing the cache makes them valid again until they expire.
 
 ## 6. Known issues
 
-- Authorization between users is not enforced on most API endpoints; see [Forms](forms.md), [Form Entries](form-entries.md), and [Form Notifications](form-notifications.md).
-- The sidebar still links to the starter kit's GitHub repository and documentation.
+- The `sessions` and `password_reset_tokens` tables are still created by the base migration but are no longer used.
+- Authorization between users is not enforced on the entry and notification endpoints; see [Form Entries](form-entries.md) and [Form Notifications](form-notifications.md).
 
 ## 7. Open questions
 
-1. Should API tokens be per-user, per-form, or both (e.g. a public submit key per form)?
-2. Is registration intended to stay invite-only?
-3. Should account deletion cascade to forms, entries, and notifications, or be blocked while forms exist?
+1. Should registration and password reset be offered as API endpoints, or remain operator-only?
+2. Is a 60-minute access token with a 14-day refresh window right, or should refresh tokens be separate and revocable?
+3. Should per-form public keys be introduced for form submissions, separate from account JWTs?
