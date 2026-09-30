@@ -1,15 +1,12 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/react-starter-kit",
+    "name": "adgodev/headless-form-handler-laravel",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": [
-        "laravel",
-        "framework"
-    ],
+    "description": "An API-first form handler built in Laravel",
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "dedoc/scramble": "^0.13.46",
         "laravel/chisel": "^0.1.0",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",

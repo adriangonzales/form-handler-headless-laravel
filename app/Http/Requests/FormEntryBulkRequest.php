@@ -67,7 +67,7 @@ class FormEntryBulkRequest extends FormRequest
                 'string',
                 'distinct',
                 Rule::exists('form_entries', 'id')
-                    ->where('form_id', $form->id)
+                    ->where('form_id', $form?->id)
                     ->where(fn (Builder $query) => $actsOnDeletedEntries
                         ? $query->whereNotNull('deleted_at')
                         : $query->whereNull('deleted_at')),

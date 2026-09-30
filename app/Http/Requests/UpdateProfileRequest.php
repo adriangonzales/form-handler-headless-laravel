@@ -38,12 +38,12 @@ class UpdateProfileRequest extends FormRequest
      */
     public function rules(): array
     {
-        /** @var User $user */
+        /** @var ?User $user */
         $user = $this->user();
 
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'email' => ['sometimes', 'required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'email' => ['sometimes', 'required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user?->id)],
         ];
     }
 }

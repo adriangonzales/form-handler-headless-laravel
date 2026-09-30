@@ -9415,16 +9415,6 @@ namespace Illuminate\Support\Facades {
             \Illuminate\Filesystem\Filesystem::flushMacros();
         }
 
-        /**
-         * @see \Blueprint\FileMixins::stub()
-         * @param mixed $path
-         * @static
-         */
-        public static function stub($path)
-        {
-            return \Illuminate\Filesystem\Filesystem::stub($path);
-        }
-
             }
     /**
      * @see \Illuminate\Auth\Access\Gate
@@ -24442,23 +24432,6 @@ namespace Tymon\JWTAuth\Facades {
         {
             /** @var \Tymon\JWTAuth\Factory $instance */
             return $instance->setRefreshFlow($refreshFlow);
-        }
-
-            }
-    }
-
-namespace Illuminate\Filesystem {
-    /**
-     */
-    class Filesystem {
-        /**
-         * @see \Blueprint\FileMixins::stub()
-         * @param mixed $path
-         * @static
-         */
-        public static function stub($path)
-        {
-            return \Illuminate\Filesystem\Filesystem::stub($path);
         }
 
             }
