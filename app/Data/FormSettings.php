@@ -55,7 +55,7 @@ final class FormSettings extends Data
 
         $value = $input[$this->honeypot_name] ?? null;
 
-        return $value !== null && $value !== '' && $value !== [];
+        return ! in_array($value, [null, '', []], true);
     }
 
     /**
