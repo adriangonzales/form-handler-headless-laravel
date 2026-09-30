@@ -12,17 +12,6 @@ beforeEach(function (): void {
     ]);
 });
 
-/**
- * Tokens are parsed once per application instance, so reset the JWT
- * state between requests to mimic separate HTTP calls.
- */
-function freshAuthState(): void
-{
-    auth()->forgetGuards();
-    app()->forgetInstance('tymon.jwt');
-    app()->forgetInstance('tymon.jwt.auth');
-}
-
 function loginToken(): string
 {
     $token = test()->postJson(route('auth.login'), [

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -46,7 +47,25 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Tokens are parsed once per application instance, so reset the JWT
+ * state between requests to mimic separate HTTP calls.
+ */
+function freshAuthState(): void
 {
-    // ..
+    auth()->forgetGuards();
+    app()->forgetInstance('tymon.jwt');
+    app()->forgetInstance('tymon.jwt.auth');
+}
+
+/**
+ * Issue an API token for the user, as a login would.
+ */
+function apiToken(User $user): string
+{
+    $token = auth('api')->login($user);
+
+    freshAuthState();
+
+    return $token;
 }

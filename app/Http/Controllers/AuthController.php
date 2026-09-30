@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
+use App\Models\User;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,7 +38,9 @@ class AuthController extends Controller
      * Exchange a current or recently expired token for a new one.
      *
      * The old token is blacklisted. Refreshing is allowed until the
-     * token is older than the configured refresh TTL.
+     * token is older than the configured refresh TTL, and never for a
+     * token revoked by a password change or reset: the new token keeps
+     * the original token version, so it is checked against revocation.
      *
      * @throws AuthenticationException
      */
@@ -45,7 +48,17 @@ class AuthController extends Controller
     {
         try {
             $token = $this->guard()->refresh();
+            $payload = $this->guard()->setToken($token)->payload();
         } catch (JWTException) {
+            throw new AuthenticationException;
+        }
+
+        $subject = $payload->get('sub');
+        $user = is_int($subject) || is_string($subject) ? User::find($subject) : null;
+
+        if ($user === null || $user->tokenIsRevoked($payload->get('tv'))) {
+            $this->guard()->invalidate();
+
             throw new AuthenticationException;
         }
 

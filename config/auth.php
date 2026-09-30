@@ -98,6 +98,8 @@ return [
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
             'throttle' => 60,
+            // The client page that receives ?token=...&email=... from the reset email.
+            'reset_url' => env('PASSWORD_RESET_URL', env('APP_URL').'/reset-password'),
         ],
     ],
 

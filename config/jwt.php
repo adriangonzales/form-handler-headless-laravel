@@ -171,8 +171,8 @@ return [
     */
 
     'persistent_claims' => [
-        // 'foo',
-        // 'bar',
+        // The owner's token version; see User::revokeTokens().
+        'tv',
     ],
 
     /*

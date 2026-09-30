@@ -21,11 +21,12 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $remember_token
+ * @property int $token_version
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
 #[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'token_version'])]
 class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<UserFactory> */
@@ -43,6 +44,7 @@ class User extends Authenticatable implements JWTSubject
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'token_version' => 'integer',
         ];
     }
 
@@ -52,6 +54,24 @@ class User extends Authenticatable implements JWTSubject
     public function forms(): HasMany
     {
         return $this->hasMany(Form::class);
+    }
+
+    /**
+     * Revoke every token issued so far by bumping the token version carried in each token's "tv"
+     * claim. Tokens issued afterwards carry the new version and remain valid.
+     */
+    public function revokeTokens(): void
+    {
+        $this->forceFill(['token_version' => $this->token_version + 1])->save();
+    }
+
+    /**
+     * Determine whether a token carrying the given version was revoked by revokeTokens(). Tokens
+     * issued before versions existed have no claim and count as version 0.
+     */
+    public function tokenIsRevoked(?int $tokenVersion): bool
+    {
+        return ($tokenVersion ?? 0) !== $this->token_version;
     }
 
     /**
@@ -69,6 +89,6 @@ class User extends Authenticatable implements JWTSubject
      */
     public function getJWTCustomClaims(): array
     {
-        return [];
+        return ['tv' => $this->token_version];
     }
 }
