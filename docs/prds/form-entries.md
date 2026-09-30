@@ -102,7 +102,6 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 - **No public submission endpoint.** The store route is behind `auth:api`, so a browser form cannot post to it without exposing an account's JWT. The controller has a TODO to split out an inbound, public-facing endpoint. This is the most significant gap for a "headless form handler".
 - **No spam protection** (captcha, honeypot, rate limiting on submissions). Placeholders only.
 - **No IP geolocation or user-agent parsing** for the `*_display` fields.
-- Pending tests (`todo`): form/entry ID match, starring, marking read, marking unread.
 
 ## 7. Known issues
 

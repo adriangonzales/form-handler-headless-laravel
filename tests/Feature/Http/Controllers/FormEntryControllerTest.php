@@ -430,6 +430,23 @@ it('updates an entry on a form the user owns', function (): void {
     $response->assertJsonPath('data.starred', true);
 });
 
+it('triages a single entry', function (array $before, array $payload, string $attribute, mixed $expected): void {
+    $this->actingAs($this->user);
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id, ...$before]);
+
+    $response = $this->patchJson(route('entries.update', $entry), $payload);
+
+    $response->assertOk();
+    $response->assertJsonPath('data.'.$attribute, $expected);
+    expect($entry->fresh()->toArray()[$attribute])->toBe($expected);
+})->with([
+    'star' => [['starred' => false], ['starred' => true], 'starred', true],
+    'unstar' => [['starred' => true], ['starred' => false], 'starred', false],
+    'mark read' => [['read_at' => null], ['read_at' => '2026-01-02T03:04:05Z'], 'read_at', '2026-01-02T03:04:05.000000Z'],
+    'mark unread' => [['read_at' => '2026-01-02 03:04:05'], ['read_at' => null], 'read_at', null],
+]);
+
 it('updates only the fields sent in a partial update', function (): void {
     $this->actingAs($this->user);
     $this->travelTo('2026-01-02 03:04:05');
@@ -540,10 +557,6 @@ it('forbids updating an entry on a form the user does not own', function (): voi
     expect($entry->fresh()->starred)->toBeFalse();
 });
 
-todo('Test that form and entry IDs match');
-todo('Test marking as starred');
-todo('Test marking as read');
-todo('Test marking as unread');
 it('soft deletes an entry', function (): void {
     $this->actingAs($this->user);
 
