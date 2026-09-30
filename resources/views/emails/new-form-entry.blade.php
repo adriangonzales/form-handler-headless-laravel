@@ -2,7 +2,12 @@
 <html>
 
 <body style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; color: #1f2937; line-height: 1.5;">
-    <p>A new entry was submitted to <strong>{{ $formName }}</strong> on {{ $submittedAt }}.</p>
+    @if ($submittedAtLocal === null)
+        <p>A new entry was submitted to <strong>{{ $formName }}</strong> on {{ $submittedAtUtc }}.</p>
+    @else
+        <p>A new entry was submitted to <strong>{{ $formName }}</strong> on <strong>{{ $submittedAtLocal }}</strong>
+            <span style="color: #6b7280;">({{ $submittedAtUtc }})</span>.</p>
+    @endif
 
     @if ($fields === [])
         <p>This form has no fields.</p>

@@ -1,4 +1,4 @@
-A new entry was submitted to {{ $formName }} on {{ $submittedAt }}.
+A new entry was submitted to {{ $formName }} on {{ $submittedAtLocal === null ? $submittedAtUtc : $submittedAtLocal.' ('.$submittedAtUtc.')' }}.
 
 @forelse ($fields as $field)
 {{ $field['label'] }}: {{ $field['value'] }}

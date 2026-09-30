@@ -74,6 +74,33 @@ it('emails the submitted values to the recipient', function (): void {
     });
 });
 
+it('emphasises the submission time in the form timezone alongside UTC', function (): void {
+    $this->form->update(['settings' => ['timezone' => 'America/Chicago']]);
+    $this->travelTo('2026-01-03 03:04:05');
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+
+    $mail = new NewFormEntry($entry);
+
+    $mail->assertSeeInHtml('on <strong>Fri, Jan 2, 2026 9:04 PM CST</strong>', false);
+    $mail->assertSeeInHtml('(Sat, Jan 3, 2026 3:04 AM UTC)', false);
+    $mail->assertSeeInText('on Fri, Jan 2, 2026 9:04 PM CST (Sat, Jan 3, 2026 3:04 AM UTC).');
+});
+
+it('shows only the UTC submission time when the form has no timezone', function (?array $settings): void {
+    $this->form->update(['settings' => $settings]);
+    $this->travelTo('2026-01-03 03:04:05');
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+
+    $mail = new NewFormEntry($entry);
+
+    $mail->assertSeeInHtml('on Sat, Jan 3, 2026 3:04 AM UTC.', false);
+    $mail->assertSeeInText('on Sat, Jan 3, 2026 3:04 AM UTC.');
+})->with([
+    'no settings' => [null],
+    'no timezone' => [['timezone' => null]],
+    'UTC timezone' => [['timezone' => 'UTC']],
+]);
+
 it('clears a previous error after a successful delivery', function (): void {
     Mail::fake();
     $recipient = FormNotification::factory()->create(['form_id' => $this->form->id, 'type' => 'email', 'enabled' => true]);

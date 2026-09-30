@@ -52,7 +52,8 @@ class NewFormEntry extends Mailable
             text: 'emails.new-form-entry-text',
             with: [
                 'formName' => $this->formEntry->form->name,
-                'submittedAt' => $this->formEntry->created_at?->toDayDateTimeString().' UTC',
+                'submittedAtUtc' => $this->formEntry->created_at?->toDayDateTimeString().' UTC',
+                'submittedAtLocal' => $this->localSubmissionTime(),
                 'fields' => collect((new MapFormData)($this->formEntry))
                     ->map(fn (array $field): array => [
                         'label' => $field['label'],
@@ -72,6 +73,23 @@ class NewFormEntry extends Mailable
     public function attachments(): array
     {
         return [];
+    }
+
+    /**
+     * Get the submission time in the form's timezone, or null when the form has none (or uses UTC)
+     * and the UTC time alone is shown.
+     */
+    private function localSubmissionTime(): ?string
+    {
+        $timezone = $this->formEntry->form->settings?->timezone;
+
+        if ($timezone === null || $timezone === 'UTC' || $this->formEntry->created_at === null) {
+            return null;
+        }
+
+        $localTime = $this->formEntry->created_at->setTimezone($timezone);
+
+        return $localTime->toDayDateTimeString().' '.$localTime->format('T');
     }
 
     private function displayValue(mixed $value): string

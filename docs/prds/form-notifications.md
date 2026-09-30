@@ -61,7 +61,9 @@ Responds `201` with the recipient resource.
 
 **FR-6 Alert on new entries.** When an entry is created (`FormEntryCreated`), the `SendFormEntryAlerts` listener queues one `DeliverFormEntryAlert` job per recipient of that form that is enabled, not deleted and of type `email`. Entries flagged as spam are not alerted. SMS recipients are skipped (see Gaps).
 
-**FR-7 Alert email.** The `NewFormEntry` mailable is sent to the recipient's address with the subject `New entry: {form name}`. It lists the submission time (UTC) and each schema field's label with the submitted value (`—` when empty; lists joined with `, `), as HTML and plain text. Values are HTML-escaped and never rendered as Markdown, so submitted content cannot inject links or markup.
+**FR-7 Alert email.** The `NewFormEntry` mailable is sent to the recipient's address with the subject `New entry: {form name}`. It lists the submission time and each schema field's label with the submitted value (`—` when empty; lists joined with `, `), as HTML and plain text. Values are HTML-escaped and never rendered as Markdown, so submitted content cannot inject links or markup.
+
+The submission time is shown in UTC (e.g. `Sat, Jan 3, 2026 3:04 AM UTC`). When the form's `settings.timezone` is set to anything other than `UTC`, the time in that timezone is shown first, bolded in HTML, with the UTC time after it in brackets (e.g. **Fri, Jan 2, 2026 9:04 PM CST** (Sat, Jan 3, 2026 3:04 AM UTC)). The abbreviation comes from the timezone database, so some zones show an offset such as `+04` instead.
 
 **FR-8 Retries and error recording.** A delivery is attempted up to 3 times, waiting 60 seconds and then 300 seconds between attempts. After the final failure, the exception message (truncated to 255 characters) is stored in the recipient's `error`, and the job is kept in `failed_jobs` so an operator can re-run it with `php artisan queue:retry`. A successful delivery clears `error`. A recipient that was disabled or deleted, or an entry that was deleted, after the alert was queued is skipped. Delivery requires a queue worker.
 
