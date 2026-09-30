@@ -199,3 +199,110 @@ it('rejects a client-supplied error', function (string $method, string $routeNam
     'store' => ['POST', 'forms.notifications.store', false],
     'update' => ['PUT', 'notifications.update', true],
 ]);
+
+it('validates the value according to the type', function (string $method, string $routeName, bool $existing, string $type, string $value, bool $valid): void {
+    $this->actingAs($this->user);
+
+    $notification = FormNotification::factory()->create(['form_id' => $this->form->id]);
+
+    $response = $this->json($method, route($routeName, $existing ? $notification : $this->form), [
+        'type' => $type,
+        'value' => $value,
+        'enabled' => true,
+    ]);
+
+    if ($valid) {
+        $response->assertSuccessful();
+        $response->assertJsonPath('data.value', $value);
+    } else {
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors('value');
+    }
+})->with([
+    'store' => ['POST', 'forms.notifications.store', false],
+    'update' => ['PUT', 'notifications.update', true],
+])->with([
+    'valid email' => ['email', 'alerts@example.com', true],
+    'email that is not an address' => ['email', 'not-an-email', false],
+    'phone number given as an email' => ['email', '+14155552671', false],
+    'valid E.164 number' => ['sms', '+14155552671', true],
+    'number without a plus' => ['sms', '14155552671', false],
+    'formatted number' => ['sms', '+1 (415) 555-2671', false],
+    'country code starting with 0' => ['sms', '+04155552671', false],
+    'more than 15 digits' => ['sms', '+1234567890123456', false],
+    'email given as a number' => ['sms', 'alerts@example.com', false],
+]);
+
+it('forbids access to recipients of a form the user does not own', function (string $method, string $routeName, bool $onRecipient, array $payload): void {
+    $this->actingAs(User::factory()->create());
+
+    $notification = FormNotification::factory()->create(['form_id' => $this->form->id, 'type' => 'email', 'value' => 'owner@example.com']);
+
+    $response = $this->json($method, route($routeName, $onRecipient ? $notification : $this->form), $payload);
+
+    $response->assertForbidden();
+    $response->assertJson(['message' => 'You do not own this form.']);
+    expect($this->form->notifications()->sole())
+        ->id->toBe($notification->id)
+        ->value->toBe('owner@example.com');
+})->with([
+    'list' => ['GET', 'forms.notifications.index', false, []],
+    'show' => ['GET', 'notifications.show', true, []],
+    'add' => ['POST', 'forms.notifications.store', false, ['type' => 'email', 'value' => 'intruder@example.com']],
+    'update' => ['PUT', 'notifications.update', true, ['type' => 'email', 'value' => 'intruder@example.com', 'enabled' => true]],
+    'invalid update' => ['PUT', 'notifications.update', true, ['type' => 'fax']],
+]);
+
+it('forbids access to recipients of a deleted form', function (): void {
+    $this->actingAs($this->user);
+
+    $notification = FormNotification::factory()->create(['form_id' => $this->form->id]);
+    $this->form->delete();
+
+    $this->getJson(route('notifications.show', $notification))->assertForbidden();
+});
+
+it('soft deletes a form notification', function (): void {
+    $this->actingAs($this->user);
+
+    $notification = FormNotification::factory()->create(['form_id' => $this->form->id]);
+
+    $response = $this->deleteJson(route('notifications.destroy', $notification));
+
+    $response->assertNoContent();
+    $this->assertSoftDeleted($notification);
+    $this->getJson(route('forms.notifications.index', $this->form))->assertJsonCount(0, 'data');
+    $this->getJson(route('notifications.show', $notification))->assertNotFound();
+});
+
+it('restores a soft deleted form notification', function (): void {
+    $this->actingAs($this->user);
+
+    $notification = FormNotification::factory()->create(['form_id' => $this->form->id]);
+    $notification->delete();
+
+    $response = $this->postJson(route('notifications.restore', $notification));
+
+    $response->assertOk();
+    $response->assertJson(['data' => ['id' => $notification->id, 'deleted_at' => null]]);
+    $this->assertNotSoftDeleted($notification);
+});
+
+it('forbids deleting or restoring a recipient of a form the user does not own', function (string $method, string $routeName, bool $trashed): void {
+    $this->actingAs(User::factory()->create());
+
+    $notification = FormNotification::factory()->create(['form_id' => $this->form->id]);
+
+    if ($trashed) {
+        $notification->delete();
+    }
+
+    $response = $this->json($method, route($routeName, $notification));
+
+    $response->assertForbidden();
+    $response->assertJson(['message' => 'You do not own this form.']);
+    expect(FormNotification::withTrashed()->find($notification->id)?->trashed())->toBe($trashed);
+})->with([
+    'delete' => ['DELETE', 'notifications.destroy', false],
+    'restore' => ['POST', 'notifications.restore', true],
+]);

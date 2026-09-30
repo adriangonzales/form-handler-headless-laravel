@@ -105,7 +105,7 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 
 ## 7. Known issues
 
-- **Undelivered alerts.** `NewFormEntry` mail and notification calls are commented out; see [Form Notifications](form-notifications.md).
+- **SMS alerts are not delivered.** Email recipients are alerted when an entry is created; SMS recipients are not. See [Form Notifications](form-notifications.md).
 
 ## 8. Open questions
 

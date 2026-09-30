@@ -7,6 +7,8 @@ use App\Http\Controllers\FormEntryController;
 use App\Http\Controllers\FormEntryExportController;
 use App\Http\Controllers\FormNotificationController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\PostmarkWebhookController;
+use App\Http\Middleware\VerifyPostmarkWebhook;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -27,6 +29,10 @@ Route::prefix('v1')->group(function () {
             Route::put('password', [AccountController::class, 'updatePassword'])->name('password.update');
         });
     });
+
+    Route::post('webhooks/postmark/bounces', PostmarkWebhookController::class)
+        ->middleware(VerifyPostmarkWebhook::class)
+        ->name('webhooks.postmark.bounces');
 
     Route::middleware(['auth:api', 'token.current'])->group(function () {
         Route::apiResource('forms', FormController::class)->only('index', 'show', 'store', 'update', 'destroy');
@@ -53,7 +59,10 @@ Route::prefix('v1')->group(function () {
             ->withTrashed()
             ->name('entries.force-destroy');
         Route::apiResource('forms.notifications', FormNotificationController::class)
-            ->only('index', 'show', 'store', 'update')
+            ->only('index', 'show', 'store', 'update', 'destroy')
             ->shallow();
+        Route::post('notifications/{notification}/restore', [FormNotificationController::class, 'restore'])
+            ->withTrashed()
+            ->name('notifications.restore');
     });
 });

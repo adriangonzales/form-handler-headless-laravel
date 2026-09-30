@@ -21,9 +21,11 @@ class FormNotificationFactory extends Factory
         return [
             'form_id' => Form::factory(),
             'type' => fake()->randomElement(['email', 'sms']),
-            'value' => fake()->word(),
+            'value' => fn (array $attributes): string => $attributes['type'] === 'email'
+                ? fake()->safeEmail()
+                : fake()->e164PhoneNumber(),
             'enabled' => fake()->boolean(),
-            'error' => fake()->word(),
+            'error' => null,
         ];
     }
 }

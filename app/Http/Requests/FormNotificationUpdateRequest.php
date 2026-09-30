@@ -4,17 +4,22 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Concerns\FormNotificationValueRules;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 
 class FormNotificationUpdateRequest extends FormRequest
 {
+    use FormNotificationValueRules;
+
     /**
      * Determine if the user is authorized to make this request.
      */
-    public function authorize(): bool
+    public function authorize(): Response
     {
-        return true;
+        return Gate::inspect('update', $this->route('notification'));
     }
 
     /**
@@ -28,7 +33,7 @@ class FormNotificationUpdateRequest extends FormRequest
         return [
             'form_id' => ['prohibited'],
             'type' => ['required', 'in:email,sms'],
-            'value' => ['required', 'string'],
+            'value' => $this->valueRules(),
             'enabled' => ['required'],
             'error' => ['prohibited'],
         ];

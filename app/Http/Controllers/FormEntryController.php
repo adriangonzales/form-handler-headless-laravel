@@ -61,9 +61,6 @@ class FormEntryController extends Controller
 
         event(new FormEntryCreated($formEntry));
 
-        // $form->user->notify(new NewFormEntry($formEntry));
-        // Mail::to($form->user)->send(new NewFormEntry($formEntry));
-
         return new FormEntryResource($formEntry);
     }
 

@@ -76,8 +76,7 @@ All under `/api/v1/auth`.
 
 ## 6. Known issues
 
-- The `sessions` table is still created by the base migration but is no longer used.
-- Authorization between users is not enforced on the notification endpoints; see [Form Notifications](form-notifications.md). Entry endpoints are restricted to the form owner.
+None currently.
 
 ## 7. Open questions
 

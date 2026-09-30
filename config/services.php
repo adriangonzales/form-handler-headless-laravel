@@ -16,6 +16,9 @@ return [
 
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
+        // Basic auth credentials embedded in the bounce webhook URL configured in Postmark.
+        'webhook_username' => env('POSTMARK_WEBHOOK_USERNAME'),
+        'webhook_password' => env('POSTMARK_WEBHOOK_PASSWORD'),
     ],
 
     'resend' => [

@@ -14,6 +14,8 @@
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
         "spatie/laravel-data": "^4.23",
+        "symfony/http-client": "^8.1",
+        "symfony/postmark-mailer": "^8.1",
         "tymon/jwt-auth": "^2.3"
     },
     "require-dev": {
