@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('form_entries', function (Blueprint $table): void {
             $table->ulid('id')->primary();
             $table->foreignUlid('form_id')->constrained();
-            $table->json('data')->nullable();
+            $table->json('input')->nullable();
             $table->string('ip')->nullable();
             $table->string('ip_location_display')->nullable();
             $table->string('referer')->nullable();

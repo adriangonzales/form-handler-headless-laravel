@@ -11,11 +11,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * @property array<string, mixed>|null $data
+ * @property array<string, mixed>|null $input
  */
 #[Fillable([
     'form_id',
-    'data',
+    'input',
     'ip',
     'ip_location_display',
     'referer',
@@ -43,7 +43,7 @@ class FormEntry extends Model
     protected function casts(): array
     {
         return [
-            'data' => 'array',
+            'input' => 'array',
             'spam' => 'boolean',
             'spam_score' => 'decimal:2',
             'starred' => 'boolean',

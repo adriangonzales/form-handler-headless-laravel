@@ -19,7 +19,7 @@ class MapFormData
         foreach ($formEntry->form->schema ?? [] as $fieldId => $fieldSettings) {
             $data[$fieldId] = [
                 'label' => $fieldSettings['label'] ?? $fieldId,
-                'data' => Arr::get($formEntry->data ?? [], $fieldId),
+                'data' => Arr::get($formEntry->input ?? [], $fieldId),
             ];
         }
 

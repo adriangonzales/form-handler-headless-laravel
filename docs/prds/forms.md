@@ -117,7 +117,7 @@ The form is created under the authenticated user, `active` defaults to `false`, 
 
 ## 9. Known issues
 
-- **`name` override vs. display mapping.** Validation keys data by `name ?? fieldId`, but `MapFormData` looks values up by field ID. For any field that sets `name`, the mapped `data` will be `null`.
+- **`name` override vs. display mapping.** Validation keys the entry's `input` by `name ?? fieldId`, but `MapFormData` looks values up by field ID. For any field that sets `name`, the mapped `data` will be `null`.
 - **Unvalidated rule strings.** Rules from the schema are passed straight to the validator. An invalid rule name causes a server error at submission time rather than a 422 at form-save time.
 - **`active` accepts any value.** The update rule is only `required`, with no `boolean` rule, so values such as `"yes"` or `"banana"` are accepted and cast to `true`.
 - **Blueprint drift.** `draft.yaml` specifies `limit:10` and newest-first ordering; the code uses 15 per page, oldest first by default (newest first is available with `sort=-created_at`).

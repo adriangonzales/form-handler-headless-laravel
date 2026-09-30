@@ -32,7 +32,7 @@ it('lists results from the index', function (): void {
             '*' => [
                 'id',
                 'form_id',
-                'data',
+                'input',
                 'ip',
                 'ip_location_display',
                 'referer',
@@ -69,25 +69,28 @@ it('shows single form entry', function (): void {
     $response = $this->get(route('entries.show', [$entry]));
 
     $response->assertOk();
-    $response->assertJson(['id' => $entry->id]);
+    $response->assertJson(['data' => ['id' => $entry->id]]);
     $response->assertJsonStructure([
-        'id',
-        'form_id',
-        'data',
-        'ip',
-        'ip_location_display',
-        'referer',
-        'user_agent',
-        'user_agent_display',
-        'spam',
-        'spam_score',
-        'spam_reason',
-        'starred',
-        'read_at',
-        'created_at',
-        'updated_at',
-        'deleted_at',
+        'data' => [
+            'id',
+            'form_id',
+            'input',
+            'ip',
+            'ip_location_display',
+            'referer',
+            'user_agent',
+            'user_agent_display',
+            'spam',
+            'spam_score',
+            'spam_reason',
+            'starred',
+            'read_at',
+            'created_at',
+            'updated_at',
+            'deleted_at',
+        ],
     ]);
+    $response->assertJsonMissingPath('id');
 });
 
 it('creates a new form entry', function (): void {
@@ -104,18 +107,20 @@ it('creates a new form entry', function (): void {
 
     $response->assertCreated();
     $response->assertJson([
-        'form_id' => $this->form->id,
-        'data' => [],
-        'ip' => '127.0.0.1',
-        'ip_location_display' => null,
-        'referer' => null,
-        'user_agent' => 'Symfony',
-        'user_agent_display' => null,
-        'spam' => false,
-        'spam_score' => '0.00',
-        'spam_reason' => null,
-        'starred' => false,
-        'read_at' => null,
+        'data' => [
+            'form_id' => $this->form->id,
+            'input' => [],
+            'ip' => '127.0.0.1',
+            'ip_location_display' => null,
+            'referer' => null,
+            'user_agent' => 'Symfony',
+            'user_agent_display' => null,
+            'spam' => false,
+            'spam_score' => '0.00',
+            'spam_reason' => null,
+            'starred' => false,
+            'read_at' => null,
+        ],
     ]);
 
     $formEntries = $this->form->entries()
@@ -127,6 +132,30 @@ it('creates a new form entry', function (): void {
     Event::assertDispatched(FormEntryCreated::class, function ($event) use ($formEntry) {
         return $event->formEntry->is($formEntry);
     });
+});
+
+it('stores only validated schema fields as input', function (): void {
+    $this->actingAs($this->user);
+    $form = Form::factory()->active()->withBasicSchema()->create(['user_id' => $this->user->id]);
+    [$nameField, $emailField, $messageField] = array_keys($form->schema);
+
+    $response = $this->postJson(route('forms.entries.store', $form), [
+        $nameField => 'Ada Lovelace',
+        $emailField => 'ada@example.com',
+        $messageField => 'Hello',
+        'unexpected' => 'dropped',
+    ]);
+
+    $expectedInput = [
+        $nameField => 'Ada Lovelace',
+        $emailField => 'ada@example.com',
+        $messageField => 'Hello',
+    ];
+
+    $response->assertCreated();
+    $response->assertJsonPath('data.input', $expectedInput);
+    $response->assertJsonMissingPath('data.input.unexpected');
+    expect($form->entries()->sole()->input)->toBe($expectedInput);
 });
 
 it('rejects entries for an inactive form', function (): void {
@@ -153,9 +182,11 @@ it('includes timestamps in the form entry resource', function (): void {
 
     $response->assertOk();
     $response->assertJson([
-        'created_at' => '2026-01-02T03:04:05.000000Z',
-        'updated_at' => '2026-01-02T03:04:05.000000Z',
-        'deleted_at' => null,
+        'data' => [
+            'created_at' => '2026-01-02T03:04:05.000000Z',
+            'updated_at' => '2026-01-02T03:04:05.000000Z',
+            'deleted_at' => null,
+        ],
     ]);
 });
 

@@ -20,7 +20,7 @@ class FormEntryFactory extends Factory
     {
         return [
             'form_id' => Form::factory(),
-            'data' => '{}',
+            'input' => [],
             'ip' => fake()->word(),
             'ip_location_display' => fake()->word(),
             'referer' => fake()->word(),

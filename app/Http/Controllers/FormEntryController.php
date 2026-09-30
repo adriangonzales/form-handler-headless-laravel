@@ -30,7 +30,7 @@ class FormEntryController extends Controller
     {
         /** @var FormEntry */
         $formEntry = $form->entries()->create([
-            'data' => $request->validated(),
+            'input' => $request->validated(),
             'ip' => implode(',', $request->ips()),
             // 'ip_location_display' => null, // TODO: Add parse step
             'referer' => $request->header('HTTP_REFERER'),

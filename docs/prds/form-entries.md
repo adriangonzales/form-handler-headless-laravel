@@ -25,7 +25,7 @@ Table `form_entries`:
 | ---------------------------------------- | ---------------------- | --------------------------------------------- |
 | `id`                                     | ULID (PK)              |                                               |
 | `form_id`                                | FK (ULID) → `forms.id` |                                               |
-| `data`                                   | JSON, nullable         | Validated submission values                   |
+| `input`                                  | JSON, nullable         | Validated submission values                   |
 | `ip`                                     | string, nullable       | All client IPs from the request, comma-joined |
 | `ip_location_display`                    | string, nullable       | Reserved; not populated                       |
 | `referer`                                | string, nullable       | See Known issues                              |
@@ -44,7 +44,7 @@ Table `form_entries`:
 
 - The form must be active; otherwise the request is rejected with `403 {"message":"This form is not accepting submissions."}` before validation.
 - Request fields are validated with the rules built from the form's schema (see [Forms FR-5](forms.md)). Failures return 422 with per-field errors.
-- Only validated fields are stored in `data`; unknown fields are silently dropped. A form with an empty schema stores `data: []`.
+- Only validated fields are stored in `input`; unknown fields are silently dropped. A form with an empty schema stores `input: []`.
 - Metadata captured: `ip`, `referer`, `user_agent`. `spam` is set to `false` and `spam_score` to `0`.
 - A `FormEntryCreated` event is dispatched (no listeners are registered).
 - Responds `201` with the entry resource.
@@ -59,13 +59,13 @@ Table `form_entries`:
 | ----------------------------------------------------------------------------------------- | ----------------- |
 | `spam_score`                                                                              | required, numeric |
 | `starred`                                                                                 | required          |
-| `data`                                                                                    | nullable, json    |
+| `input`                                                                                   | nullable, json    |
 | `ip`, `ip_location_display`, `referer`, `user_agent`, `user_agent_display`, `spam_reason` | nullable, string  |
 | `spam`, `read_at`                                                                         | nullable          |
 
 Returns the refreshed entry. This is the mechanism for starring, marking read/unread, and flagging spam.
 
-**FR-5 Response shape.** The entry resource returns `id, form_id, data, ip, ip_location_display, referer, user_agent, user_agent_display, spam, spam_score, spam_reason, starred, read_at, created_at, updated_at, deleted_at`. Because the payload has its own `data` key, Laravel does **not** add the usual `{ "data": ... }` wrapper to single entries — unlike forms and notifications. `spam_score` is serialised as a string with 2 decimals; `read_at` as a Unix timestamp integer. `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` for any record the API can return.
+**FR-5 Response shape.** Entries are returned as `{ "data": { id, form_id, input, ip, ip_location_display, referer, user_agent, user_agent_display, spam, spam_score, spam_reason, starred, read_at, created_at, updated_at, deleted_at } }`, wrapped in `data` like forms and notifications. The submitted values are under `data.input`. `spam_score` is serialised as a string with 2 decimals; `read_at` as a Unix timestamp integer. `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` for any record the API can return.
 
 ## 6. Gaps
 
@@ -81,8 +81,8 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 ## 7. Known issues
 
 - **Referer is never captured.** The controller reads `$request->header('HTTP_REFERER')`; the header name is `Referer`, so the value is always `null`.
-- **Update allows rewriting submission metadata.** `data`, `ip`, `user_agent` and `referer` are editable, which undermines the audit trail.
-- **`data` validated as a JSON string on update** while the model casts it to an array, so updating `data` with a JSON object fails validation.
+- **Update allows rewriting submission metadata.** `input`, `ip`, `user_agent` and `referer` are editable, which undermines the audit trail.
+- **`input` validated as a JSON string on update** while the model casts it to an array, so updating `input` with a JSON object fails validation.
 - **Full-replacement semantics.** `spam_score` and `starred` are required on every update, so a client cannot PATCH just `read_at`.
 - **Mixed date formats.** `read_at` is serialised as a Unix integer (model cast `timestamp`) while `created_at`, `updated_at` and `deleted_at` are ISO 8601 strings.
 - **Precision mismatch.** Column is `decimal(4,3)` but the model casts to `decimal:2`.

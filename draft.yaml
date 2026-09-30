@@ -12,7 +12,7 @@ models:
     FormEntry:
         id: ulid
         form_id: foreign:forms.id
-        data: json nullable
+        input: json nullable
         ip: string nullable
         ip_location_display: string nullable
         referer: string nullable
@@ -62,7 +62,7 @@ controllers:
         show:
             find: formEntry.id
         store:
-            validate: formId, data
+            validate: formId, input
             save: formEntry
             fire: FormEntryCreated with:formEntry
             notify: form.user NewFormEntry

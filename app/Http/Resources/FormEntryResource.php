@@ -23,7 +23,7 @@ class FormEntryResource extends JsonResource
         return [
             'id' => $this->id,
             'form_id' => $this->form_id,
-            'data' => $this->data,
+            'input' => $this->input,
             'ip' => $this->ip,
             'ip_location_display' => $this->ip_location_display,
             'referer' => $this->referer,
