@@ -10,26 +10,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 
-/**
- * @return list<list<string>>
- */
-function parseCsv(string $csv): array
-{
-    $handle = fopen('php://memory', 'r+');
-    fwrite($handle, $csv);
-    rewind($handle);
-
-    $rows = [];
-
-    while (($row = fgetcsv($handle, escape: '')) !== false) {
-        $rows[] = $row;
-    }
-
-    fclose($handle);
-
-    return $rows;
-}
-
 beforeEach(function (): void {
     $this->user = User::factory()->create();
     $this->form = Form::factory()->create(['user_id' => $this->user->id]);
@@ -661,81 +641,4 @@ it('forbids bulk actions on a form the user does not own', function (): void {
 
     $response->assertForbidden();
     $this->assertNotSoftDeleted($entry);
-});
-
-it('exports entries as CSV with a column per schema field', function (): void {
-    $this->actingAs($this->user);
-    $form = Form::factory()->withBasicSchema()->create(['user_id' => $this->user->id, 'name' => 'Contact Us']);
-    [$nameField, $emailField, $messageField] = array_keys($form->schema);
-
-    $this->travelTo('2026-01-02 03:04:05');
-    $entry = FormEntry::factory()->create([
-        'form_id' => $form->id,
-        'input' => [$nameField => 'Ada Lovelace', $emailField => 'ada@example.com', $messageField => "Hello,\n\"world\""],
-        'read_at' => null,
-        'starred' => true,
-        'spam' => false,
-        'spam_score' => 0.25,
-        'spam_reason' => null,
-        'ip' => '127.0.0.1',
-        'referer' => 'https://example.com/contact',
-        'user_agent' => 'Mozilla/5.0',
-    ]);
-
-    $response = $this->get(route('forms.entries.export', $form));
-
-    $response->assertOk();
-    $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
-    $response->assertDownload('contact-us-entries-2026-01-02.csv');
-
-    $rows = parseCsv($response->streamedContent());
-
-    expect($rows[0])->toBe(['id', 'created_at', 'Name', 'Email', 'Message', 'read_at', 'starred', 'spam', 'spam_score', 'spam_reason', 'ip', 'referer', 'user_agent', 'deleted_at'])
-        ->and($rows[1])->toBe([$entry->id, '2026-01-02T03:04:05Z', 'Ada Lovelace', 'ada@example.com', "Hello,\n\"world\"", '', 'true', 'false', '0.25', '', '127.0.0.1', 'https://example.com/contact', 'Mozilla/5.0', ''])
-        ->and($rows)->toHaveCount(2);
-});
-
-it('applies index filters and sort to the export', function (): void {
-    $this->actingAs($this->user);
-
-    $this->travelTo('2026-01-01');
-    $older = FormEntry::factory()->create(['form_id' => $this->form->id, 'starred' => true]);
-    $this->travelTo('2026-01-02');
-    $newer = FormEntry::factory()->create(['form_id' => $this->form->id, 'starred' => true]);
-    FormEntry::factory()->create(['form_id' => $this->form->id, 'starred' => false]);
-
-    $response = $this->get(route('forms.entries.export', [$this->form, 'sort' => '-created_at', 'filter' => ['starred' => 'true']]));
-
-    $response->assertOk();
-
-    $ids = array_column(array_slice(parseCsv($response->streamedContent()), 1), 0);
-
-    expect($ids)->toBe([$newer->id, $older->id]);
-});
-
-it('escapes spreadsheet formulas in exported values', function (): void {
-    $this->actingAs($this->user);
-    $form = Form::factory()->withBasicSchema()->create(['user_id' => $this->user->id]);
-    [$nameField] = array_keys($form->schema);
-
-    FormEntry::factory()->create([
-        'form_id' => $form->id,
-        'input' => [$nameField => '=HYPERLINK("https://evil.example","click")'],
-        'user_agent' => '@SUM(1+1)',
-    ]);
-
-    $response = $this->get(route('forms.entries.export', $form));
-
-    $row = parseCsv($response->streamedContent())[1];
-
-    expect($row[2])->toBe('\'=HYPERLINK("https://evil.example","click")')
-        ->and($row[12])->toBe("'@SUM(1+1)");
-});
-
-it('forbids exporting entries of a form the user does not own', function (): void {
-    $this->actingAs(User::factory()->create());
-
-    $response = $this->get(route('forms.entries.export', $this->form));
-
-    $response->assertForbidden();
 });

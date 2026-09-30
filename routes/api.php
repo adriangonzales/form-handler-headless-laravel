@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FormController;
 use App\Http\Controllers\FormEntryController;
+use App\Http\Controllers\FormEntryExportController;
 use App\Http\Controllers\FormNotificationController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,8 +25,12 @@ Route::prefix('v1')->group(function () {
             ->name('forms.restore');
         Route::post('forms/{form}/duplicate', [FormController::class, 'duplicate'])
             ->name('forms.duplicate');
-        Route::get('forms/{form}/entries/export', [FormEntryController::class, 'export'])
-            ->name('forms.entries.export');
+        Route::post('forms/{form}/entries/exports', [FormEntryExportController::class, 'store'])
+            ->name('forms.entries.exports.store');
+        Route::get('entry-exports/{export}', [FormEntryExportController::class, 'show'])
+            ->name('entry-exports.show');
+        Route::get('entry-exports/{export}/download', [FormEntryExportController::class, 'download'])
+            ->name('entry-exports.download');
         Route::post('forms/{form}/entries/bulk', [FormEntryController::class, 'bulk'])
             ->name('forms.entries.bulk');
         Route::apiResource('forms.entries', FormEntryController::class)

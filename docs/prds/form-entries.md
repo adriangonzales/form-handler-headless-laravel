@@ -84,9 +84,14 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 - Every ID must belong to the form and be in the right deleted state for the action; otherwise the request returns 422 on `ids.N` and nothing changes. An unknown action returns 422 on `action`; an empty list or more than 100 IDs returns 422 on `ids`.
 - Triage actions skip entries already in the target state, so `affected` counts entries that changed and `mark_read` keeps existing read times. `mark_not_spam` also sets `spam` to `false` on entries whose spam check has not run.
 
-**FR-8 Export entries.** `GET /api/v1/forms/{form}/entries/export` streams a CSV download named `{form-name-slug}-entries-{YYYY-MM-DD}.csv`. It accepts the same `filter[...]` and `sort` parameters as the list (without pagination) and the same 422 rules.
+**FR-8 Export entries.** Exports are generated in the background so large forms never hold a request open.
 
-- Columns: `id`, `created_at`, one column per schema field headed by its label (falling back to the field's name), then `read_at`, `starred`, `spam`, `spam_score`, `spam_reason`, `ip`, `referer`, `user_agent`, `deleted_at`.
+- `POST /api/v1/forms/{form}/entries/exports` accepts the same `filter[...]` and `sort` parameters as the list (in the body or query string, without pagination) and the same 422 rules. It stores a `form_entry_exports` record, queues `GenerateFormEntryExport`, and returns `202` with a `Location` header pointing at the export.
+- `GET /api/v1/entry-exports/{export}` returns `{ "data": { id, form_id, status, parameters, filename, row_count, error, download_url, completed_at, expires_at, created_at, updated_at } }`. `status` moves from `pending` to `processing` to `completed` or `failed`; clients poll until it leaves `pending`/`processing`. `download_url` is set once the export is `completed`; `error` explains a failure (including the form being deleted before the export ran).
+- `GET /api/v1/entry-exports/{export}/download` returns the CSV, named `{form-name-slug}-entries-{YYYY-MM-DD}.csv`. It returns `409 {"message":"This export is not ready."}` until the export is completed and `410 {"message":"This export has expired."}` after it expires.
+- Exports are kept for 24 hours after they are requested (`expires_at`). An hourly `model:prune` deletes expired exports and their files; after that the export returns 404. Files are written to the default filesystem disk, which is private.
+- The entries included are those matching the filters when the job runs, not when the export was requested.
+- Columns: `id`, `created_at`, one column per schema field headed by its label (falling back to the field's name), then one column per input key stored on the exported entries that the current schema no longer has (e.g. a removed or renamed field), headed by the stored key and sorted alphabetically, then `read_at`, `starred`, `spam`, `spam_score`, `spam_reason`, `ip`, `referer`, `user_agent`, `deleted_at`.
 - Dates are ISO 8601 UTC (`2026-01-02T03:04:05Z`); booleans are `true`/`false`; missing values are empty. List values (e.g. checkboxes) are joined with `, `; other structured values are JSON.
 - Cells starting with `=`, `+`, `-`, `@`, tab or carriage return are prefixed with `'` so spreadsheet applications do not evaluate submitter input as formulas.
 
@@ -95,8 +100,6 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 - **No public submission endpoint.** The store route is behind `auth:api`, so a browser form cannot post to it without exposing an account's JWT. The controller has a TODO to split out an inbound, public-facing endpoint. This is the most significant gap for a "headless form handler".
 - **No spam protection** (captcha, honeypot, rate limiting on submissions). Placeholders only.
 - **No IP geolocation or user-agent parsing** for the `*_display` fields.
-- **Export follows the current schema.** Values stored under fields that have since been removed or renamed in the schema are not exported.
-- **Export is synchronous.** It streams from a database cursor, so memory stays flat, but a very large form holds the request open for the whole export.
 - Pending tests (`todo`): form/entry ID match, starring, marking read, marking unread.
 
 ## 7. Known issues

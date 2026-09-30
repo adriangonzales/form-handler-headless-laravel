@@ -62,6 +62,14 @@ class Form extends Model
     }
 
     /**
+     * @return HasMany<FormEntryExport, $this>
+     */
+    public function entryExports(): HasMany
+    {
+        return $this->hasMany(FormEntryExport::class);
+    }
+
+    /**
      * @return HasMany<FormNotification, $this>
      */
     public function notifications(): HasMany

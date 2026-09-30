@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use Carbon\CarbonInterface;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -60,69 +59,12 @@ class FormEntryIndexRequest extends FormRequest
     }
 
     /**
-     * Get a boolean filter's value, or null when the list is not filtered by it.
+     * Get the validated sort and filters, as accepted by FilterEntries.
      *
-     * @param  'read'|'starred'|'spam'  $filter
+     * @return array{sort?: string, filter?: array<string, string>}
      */
-    public function booleanFilter(string $filter): ?bool
+    public function parameters(): array
     {
-        return $this->has('filter.'.$filter) ? $this->boolean('filter.'.$filter) : null;
-    }
-
-    /**
-     * Get the start of the first day to include, or null when unbounded.
-     */
-    public function createdFrom(): ?CarbonInterface
-    {
-        return $this->has('filter.created_from')
-            ? $this->date('filter.created_from', 'Y-m-d')->startOfDay()
-            : null;
-    }
-
-    /**
-     * Get the end of the last day to include, or null when unbounded.
-     */
-    public function createdTo(): ?CarbonInterface
-    {
-        return $this->has('filter.created_to')
-            ? $this->date('filter.created_to', 'Y-m-d')->endOfDay()
-            : null;
-    }
-
-    /**
-     * Get whether deleted entries are included ("with") or listed alone ("only"), or null to exclude them.
-     *
-     * @return 'with'|'only'|null
-     */
-    public function trashedFilter(): ?string
-    {
-        return match ($this->input('filter.trashed')) {
-            'with' => 'with',
-            'only' => 'only',
-            default => null,
-        };
-    }
-
-    /**
-     * Get the column to sort by.
-     */
-    public function sortColumn(): string
-    {
-        return ltrim($this->sortValue(), '-');
-    }
-
-    /**
-     * Get the sort direction, defaulting to oldest first.
-     *
-     * @return 'asc'|'desc'
-     */
-    public function sortDirection(): string
-    {
-        return str_starts_with($this->sortValue(), '-') ? 'desc' : 'asc';
-    }
-
-    private function sortValue(): string
-    {
-        return $this->string('sort', 'created_at')->toString();
+        return $this->safe()->only(['sort', 'filter']);
     }
 }

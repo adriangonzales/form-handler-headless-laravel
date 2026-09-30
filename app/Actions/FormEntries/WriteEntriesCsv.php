@@ -7,6 +7,7 @@ namespace App\Actions\FormEntries;
 use App\Models\Form;
 use App\Models\FormEntry;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
 class WriteEntriesCsv
@@ -19,13 +20,16 @@ class WriteEntriesCsv
     private const array FORMULA_TRIGGERS = ['=', '+', '-', '@', "\t", "\r"];
 
     /**
-     * Write the entries as CSV: a column per schema field (headed by its label), then submission metadata.
+     * Write the entries as CSV: a column per schema field (headed by its label), a column per input key
+     * the schema no longer has (headed by the key), then submission metadata. Returns the number of entries written.
      *
-     * @param  iterable<FormEntry>  $entries
+     * @param  Builder<FormEntry>  $entries
      * @param  resource  $handle
      */
-    public function __invoke(Form $form, iterable $entries, $handle): void
+    public function __invoke(Form $form, Builder $entries, $handle): int
     {
+        $rowCount = 0;
+
         /** @var array<string, string> $fields input key => column heading */
         $fields = [];
 
@@ -34,10 +38,14 @@ class WriteEntriesCsv
             $fields[$inputKey] = $fieldSettings['label'] ?? $inputKey;
         }
 
+        foreach ($this->storedInputKeys($entries) as $inputKey) {
+            $fields[$inputKey] ??= $inputKey;
+        }
+
         $this->writeRow($handle, [
             'id',
             'created_at',
-            ...array_values($fields),
+            ...array_map(strval(...), array_values($fields)),
             'read_at',
             'starred',
             'spam',
@@ -49,13 +57,13 @@ class WriteEntriesCsv
             'deleted_at',
         ]);
 
-        foreach ($entries as $entry) {
+        foreach ($entries->cursor() as $entry) {
             $input = $entry->input ?? [];
 
             $this->writeRow($handle, [
                 $entry->id,
                 $this->formatDate($entry->created_at),
-                ...array_map(fn (string $inputKey): string => $this->formatValue($input[$inputKey] ?? null), array_keys($fields)),
+                ...array_map(fn (int|string $inputKey): string => $this->formatValue($input[$inputKey] ?? null), array_keys($fields)),
                 $this->formatDate($entry->read_at === null ? null : Carbon::createFromTimestampUTC($entry->read_at)),
                 $this->formatValue($entry->starred),
                 $this->formatValue($entry->spam),
@@ -66,7 +74,36 @@ class WriteEntriesCsv
                 $this->formatValue($entry->user_agent),
                 $this->formatDate($entry->deleted_at),
             ]);
+
+            $rowCount++;
         }
+
+        return $rowCount;
+    }
+
+    /**
+     * Collect every input key stored on the entries, sorted, without hydrating models. Entries submitted
+     * before a field was removed or renamed keep values under keys the current schema does not list.
+     *
+     * @param  Builder<FormEntry>  $entries
+     * @return list<string>
+     */
+    private function storedInputKeys(Builder $entries): array
+    {
+        $keys = [];
+
+        foreach ($entries->clone()->reorder()->select('input')->toBase()->cursor() as $row) {
+            $input = is_string($row->input) ? json_decode($row->input, true) : null;
+
+            if (is_array($input)) {
+                $keys += array_fill_keys(array_map(strval(...), array_keys($input)), true);
+            }
+        }
+
+        $keys = array_keys($keys);
+        sort($keys, SORT_STRING);
+
+        return array_map(strval(...), $keys);
     }
 
     /**
