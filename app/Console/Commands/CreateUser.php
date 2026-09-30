@@ -13,7 +13,7 @@ use Illuminate\Validation\Rules\Password;
 use function Laravel\Prompts\password;
 use function Laravel\Prompts\text;
 
-#[Signature('user:create {--name= : The account holder\'s name} {--email= : The login email} {--password= : The password (prompted for when omitted, to keep it out of shell history)}')]
+#[Signature("user:create {--name= : The account holder's name} {--email= : The login email} {--password= : The password (prompted for when omitted, to keep it out of shell history)}")]
 #[Description('Create an account holder. There is no self-service sign-up.')]
 class CreateUser extends Command
 {

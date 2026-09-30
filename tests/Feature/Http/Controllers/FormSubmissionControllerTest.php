@@ -26,6 +26,7 @@ it('accepts a submission without authentication and responds with the redirect a
         ]);
 
     $response->assertCreated();
+
     expect($response->json())->toBe([
         'data' => [
             'redirect' => 'https://example.com/thanks',
@@ -51,6 +52,7 @@ it('responds with a null redirect and message when the form has no settings', fu
     $response = $this->postJson(route('forms.submissions.store', $form));
 
     $response->assertCreated();
+
     expect($response->json('data'))->toBe([
         'redirect' => null,
         'message' => null,
@@ -67,6 +69,7 @@ it('validates a submission against the form schema', function (): void {
 
     $response->assertUnprocessable();
     $response->assertJsonValidationErrors(array_keys($form->schema));
+
     expect($form->entries()->count())->toBe(0);
 });
 
@@ -79,6 +82,7 @@ it('rejects submissions to an inactive form', function (): void {
 
     $response->assertForbidden();
     $response->assertJson(['message' => 'This form is not accepting submissions.']);
+
     expect($form->entries()->count())->toBe(0);
     Event::assertNotDispatched(FormEntryCreated::class);
 });

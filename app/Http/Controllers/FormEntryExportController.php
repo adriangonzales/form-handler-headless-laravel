@@ -28,7 +28,7 @@ class FormEntryExportController extends Controller
             'expires_at' => now()->addHours(FormEntryExport::RETENTION_HOURS),
         ]);
 
-        GenerateFormEntryExport::dispatch($export);
+        dispatch(new GenerateFormEntryExport($export));
 
         return (new FormEntryExportResource($export->fresh()))
             ->response()

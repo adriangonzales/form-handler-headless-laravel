@@ -211,6 +211,7 @@ it('rejects an export with invalid filters', function (): void {
 
     $response->assertUnprocessable();
     $response->assertJsonValidationErrors('filter.starred');
+
     expect(FormEntryExport::count())->toBe(0);
     Queue::assertNothingPushed();
 });
@@ -271,7 +272,7 @@ it('marks the export failed when its form was deleted before it ran', function (
     $export = FormEntryExport::factory()->create(['form_id' => $this->form->id]);
     $this->form->delete();
 
-    GenerateFormEntryExport::dispatchSync($export);
+    dispatch_sync(new GenerateFormEntryExport($export));
 
     expect($export->fresh())
         ->status->toBe('failed')

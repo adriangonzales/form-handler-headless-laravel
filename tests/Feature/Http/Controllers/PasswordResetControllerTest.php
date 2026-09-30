@@ -56,6 +56,7 @@ it('resets the password with a valid token and revokes existing tokens', functio
 
     $response->assertOk();
     $response->assertExactJson(['message' => 'Your password has been reset.']);
+
     expect(Hash::check('a-brand-new-passphrase', $this->user->fresh()->password))->toBeTrue();
 
     freshAuthState();
@@ -77,6 +78,7 @@ it('rejects a reset with a bad token or unknown email using the same message', f
 
     $response->assertUnprocessable();
     $response->assertJsonPath('errors.email', ['This password reset token is invalid.']);
+
     expect(Hash::check('correct-horse-battery-staple', $this->user->fresh()->password))->toBeTrue();
 })->with([
     'bad token' => ['owner@example.com', false],

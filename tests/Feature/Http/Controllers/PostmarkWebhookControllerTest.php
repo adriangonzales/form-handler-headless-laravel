@@ -35,6 +35,7 @@ it('records a hard bounce on the recipient', function (): void {
         ->postJson(route('webhooks.postmark.bounces'), postmarkBounce($this->recipient));
 
     $response->assertNoContent();
+
     expect($this->recipient->fresh()->error)
         ->toBe('Bounced (HardBounce): The server was unable to deliver your message (ex: unknown user, mailbox not found).');
 });
@@ -80,6 +81,7 @@ it('rejects webhooks without the configured credentials', function (?array $cred
     $response = $request->postJson(route('webhooks.postmark.bounces'), postmarkBounce($this->recipient));
 
     $response->assertUnauthorized();
+
     expect($this->recipient->fresh()->error)->toBeNull();
 })->with([
     'no credentials' => [null, 'webhook-secret'],

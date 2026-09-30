@@ -37,7 +37,7 @@ class NewFormEntry extends Mailable
     {
         return new Envelope(
             subject: 'New entry: '.$this->formEntry->form->name,
-            metadata: $this->recipient === null ? [] : [self::RECIPIENT_METADATA_KEY => $this->recipient->id],
+            metadata: $this->recipient instanceof FormNotification ? [self::RECIPIENT_METADATA_KEY => $this->recipient->id] : [],
         );
     }
 

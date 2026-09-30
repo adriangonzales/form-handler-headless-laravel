@@ -60,7 +60,7 @@ it('emails the submitted values to the recipient', function (): void {
         'input' => ['field_1' => 'Ada <b>Lovelace</b>', 'message' => '[click](https://evil.example)'],
     ]);
 
-    DeliverFormEntryAlert::dispatchSync($recipient, $entry);
+    dispatch_sync(new DeliverFormEntryAlert($recipient, $entry));
 
     Mail::assertSent(NewFormEntry::class, function (NewFormEntry $mail) use ($recipient): bool {
         $html = $mail->render();
@@ -80,7 +80,7 @@ it('clears a previous error after a successful delivery', function (): void {
     $recipient->forceFill(['error' => 'Mailbox full'])->save();
     $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
 
-    DeliverFormEntryAlert::dispatchSync($recipient, $entry);
+    dispatch_sync(new DeliverFormEntryAlert($recipient, $entry));
 
     expect($recipient->fresh()->error)->toBeNull();
 });
@@ -126,7 +126,7 @@ it('skips a recipient that was disabled or deleted after the alert was queued', 
         'entry deleted' => $entry->delete(),
     };
 
-    DeliverFormEntryAlert::dispatchSync($recipient->fresh() ?? FormNotification::withTrashed()->find($recipient->id), $entry);
+    dispatch_sync(new DeliverFormEntryAlert($recipient->fresh() ?? FormNotification::withTrashed()->find($recipient->id), $entry));
 
     Mail::assertNothingSent();
 })->with(['disabled', 'deleted', 'entry deleted']);

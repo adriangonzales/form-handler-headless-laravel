@@ -158,6 +158,7 @@ it('records the referer of a submission', function (?string $referer, ?string $e
 
     $response->assertCreated();
     $response->assertJsonPath('data.referer', $expected);
+
     expect($this->form->entries()->sole()->referer)->toBe($expected);
 })->with([
     'present' => ['https://example.com/contact?utm_source=newsletter', 'https://example.com/contact?utm_source=newsletter'],
@@ -439,6 +440,7 @@ it('triages a single entry', function (array $before, array $payload, string $at
 
     $response->assertOk();
     $response->assertJsonPath('data.'.$attribute, $expected);
+
     expect($entry->fresh()->toArray()[$attribute])->toBe($expected);
 })->with([
     'star' => [['starred' => false], ['starred' => true], 'starred', true],
@@ -487,6 +489,7 @@ it('keeps the stored precision of the spam score', function (): void {
 
     $response->assertOk();
     $response->assertJsonPath('data.spam_score', '0.125');
+
     expect($entry->fresh()->spam_score)->toBe('0.125');
 });
 
@@ -618,6 +621,7 @@ it('forbids deleting, restoring or permanently deleting an entry on a form the u
 
     $response->assertForbidden();
     $response->assertJson(['message' => 'You do not own this form.']);
+
     expect(FormEntry::withTrashed()->find($entry->id)?->trashed())->toBe($trashed);
 })->with([
     'delete' => ['DELETE', 'entries.destroy', false],
@@ -671,6 +675,7 @@ it('applies a bulk triage action to the selected entries', function (string $act
 
     $response->assertOk();
     $response->assertExactJson(['data' => ['action' => $action, 'affected' => 2]]);
+
     $selected->each(fn (FormEntry $entry) => expect($entry->fresh()->toArray()[$attribute])->toBe($expected));
     expect($untouched->fresh()->toArray()[$attribute])->toBe($untouchedValue);
 })->with([
@@ -695,6 +700,7 @@ it('keeps existing read times and counts only changed entries when bulk marking 
 
     $response->assertOk();
     $response->assertJsonPath('data.affected', 1);
+
     expect($alreadyRead->fresh()->read_at->toJSON())->toBe('2025-06-01T00:00:00.000000Z');
     expect($unread->fresh()->read_at)->not->toBeNull();
 });

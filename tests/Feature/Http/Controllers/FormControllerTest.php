@@ -182,6 +182,7 @@ it('rejects a non-boolean active value when updating a form', function (string $
 
     $response->assertUnprocessable();
     $response->assertJsonValidationErrors('active');
+
     expect($form->refresh()->active)->toBeFalse();
 })->with(['banana', 'yes']);
 

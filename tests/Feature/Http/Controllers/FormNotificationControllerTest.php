@@ -114,6 +114,7 @@ it('enables a new form notification by default', function (): void {
 
     $response->assertCreated();
     $response->assertJsonPath('data.enabled', true);
+
     expect($this->form->notifications()->sole()->enabled)->toBeTrue();
 });
 
@@ -177,6 +178,7 @@ it('does not move a form notification to another form', function (): void {
 
     $response->assertUnprocessable();
     $response->assertJsonValidationErrors('form_id');
+
     expect($notification->fresh()->form_id)->toBe($this->form->id);
 });
 
@@ -194,6 +196,7 @@ it('rejects a client-supplied error', function (string $method, string $routeNam
 
     $response->assertUnprocessable();
     $response->assertJsonValidationErrors('error');
+
     expect(FormNotification::where('error', 'Mailbox full')->exists())->toBeFalse();
 })->with([
     'store' => ['POST', 'forms.notifications.store', false],
@@ -301,6 +304,7 @@ it('forbids deleting or restoring a recipient of a form the user does not own', 
 
     $response->assertForbidden();
     $response->assertJson(['message' => 'You do not own this form.']);
+
     expect(FormNotification::withTrashed()->find($notification->id)?->trashed())->toBe($trashed);
 })->with([
     'delete' => ['DELETE', 'notifications.destroy', false],

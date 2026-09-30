@@ -24,6 +24,7 @@ it('updates the profile name', function (): void {
     $response->assertOk();
     $response->assertJsonPath('data.name', 'Ada Lovelace');
     $response->assertJsonPath('data.email', 'owner@example.com');
+
     expect($this->user->fresh()->email_verified_at)->not->toBeNull();
 });
 
@@ -39,6 +40,7 @@ it('keeps the verification when the same email is resubmitted', function (): voi
     $response = $this->withToken($this->token)->patchJson(route('auth.me.update'), ['email' => 'Owner@Example.com']);
 
     $response->assertOk();
+
     expect($this->user->fresh()->email_verified_at)->not->toBeNull();
 });
 
@@ -62,6 +64,7 @@ it('changes the password, revokes existing tokens and issues a new one', functio
 
     $response->assertOk();
     $response->assertJsonStructure(['access_token', 'token_type', 'expires_in']);
+
     expect(Hash::check('a-brand-new-passphrase', $this->user->fresh()->password))->toBeTrue();
     $newToken = $response->json('access_token');
 
@@ -99,6 +102,7 @@ it('rejects an invalid password change', function (array $payload, string $error
 
     $response->assertUnprocessable();
     $response->assertJsonValidationErrors($errorKey);
+
     expect(Hash::check('correct-horse-battery-staple', $this->user->fresh()->password))->toBeTrue();
 })->with([
     'wrong current password' => [['current_password' => 'wrong', 'password' => 'a-brand-new-passphrase', 'password_confirmation' => 'a-brand-new-passphrase'], 'current_password'],
@@ -112,9 +116,11 @@ it('deletes the account and everything it owns', function (): void {
     $form = Form::factory()->create(['user_id' => $this->user->id]);
     $deletedForm = Form::factory()->create(['user_id' => $this->user->id]);
     $deletedForm->delete();
+
     $entry = FormEntry::factory()->create(['form_id' => $form->id]);
     $deletedEntry = FormEntry::factory()->create(['form_id' => $deletedForm->id]);
     $deletedEntry->delete();
+
     $notification = FormNotification::factory()->create(['form_id' => $form->id]);
     $export = FormEntryExport::factory()->completed()->create(['form_id' => $form->id]);
     Storage::disk('local')->put($export->path, 'id');

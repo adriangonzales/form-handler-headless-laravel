@@ -23,6 +23,6 @@ class SendFormEntryAlerts
         $entry->form->notifications()
             ->where('enabled', true)
             ->where('type', 'email')
-            ->each(fn (FormNotification $recipient) => DeliverFormEntryAlert::dispatch($recipient, $entry));
+            ->each(fn (FormNotification $recipient) => dispatch(new DeliverFormEntryAlert($recipient, $entry)));
     }
 }
