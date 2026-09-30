@@ -1,6 +1,6 @@
 # PRD: Form Notifications
 
-**Status:** Configuration built; delivery not built · **Owner area:** `FormNotificationController`, `FormNotification` model, `App\Mail\NewFormEntry`, `App\Notification\NewFormEntry`
+**Status:** Configuration built; delivery not built · **Owner area:** `FormNotificationController`, `FormNotification` model, `App\Mail\NewFormEntry`, `App\Notifications\NewFormEntry`
 
 ## 1. Summary
 
@@ -27,7 +27,7 @@ Table `form_notifications`:
 | `form_id`                                | FK (ULID) → `forms.id` |                                                                   |
 | `type`                                   | enum `email` \| `sms`  |                                                                   |
 | `value`                                  | string                 | Email address or phone number                                     |
-| `enabled`                                | boolean                | DB default `true`; model default `false` (see Known issues)       |
+| `enabled`                                | boolean                | Default `true`                                                    |
 | `error`                                  | string, nullable       | Intended for the last delivery error; never written by the system |
 | `created_at`, `updated_at`, `deleted_at` | timestamps             | Soft-deletable                                                    |
 
@@ -39,22 +39,24 @@ Table `form_notifications`:
 
 **FR-3 Add a recipient.** `POST /api/v1/forms/{form}/notifications` accepts:
 
-| Field     | Rules                      |
-| --------- | -------------------------- |
-| `type`    | required, `email` or `sms` |
-| `value`   | required, string           |
-| `enabled` | optional, boolean          |
+| Field     | Rules                             |
+| --------- | --------------------------------- |
+| `type`    | required, `email` or `sms`        |
+| `value`   | required, string                  |
+| `enabled` | optional, boolean, default `true` |
 
 Responds `201` with the recipient resource.
 
-**FR-4 Update a recipient.** `PUT/PATCH /api/v1/notifications/{notification}` accepts `form_id`, `type`, `value`, `enabled` (all required) and `error` (nullable string). See Known issues — this endpoint currently cannot succeed.
+`error` is read-only on create and update (it is reserved for the system to report delivery failures): sending it returns 422 on `error`.
+
+**FR-4 Update a recipient.** `PUT/PATCH /api/v1/notifications/{notification}` accepts `type`, `value` and `enabled` (all required), and returns the refreshed recipient. A recipient cannot be moved to another form: sending `form_id` returns 422 on `form_id` and nothing is changed.
 
 ## 6. Alert delivery (current state)
 
 Two alert classes exist as scaffolding, neither is triggered:
 
 - `App\Mail\NewFormEntry` — mailable with subject "New Form Entry" and view `emails.new-form-entry`, which is an empty template.
-- `App\Notification\NewFormEntry` — queued mail notification containing starter placeholder text; it takes no entry argument.
+- `App\Notifications\NewFormEntry` — queued mail notification containing starter placeholder text; it takes no entry argument.
 
 The calls that would send them are commented out in `FormEntryController::store`, and they target the **form owner**, not the configured recipients. There is no SMS channel or provider configured.
 
@@ -66,15 +68,11 @@ The calls that would send them are commented out in `FormEntryController::store`
 - **No ownership checks** on any endpoint; any authenticated user can list, view, or add recipients on any form.
 - **No delete endpoint.**
 - **No error recording or retry** — `error` is never populated.
-- **No tests for update**, and none asserting cross-user access is denied.
+- **No tests asserting cross-user access is denied.**
 
 ## 8. Known issues
 
-- **Update always fails validation.** `form_id` is validated as `integer` and `exists:forms.id,id`; form IDs are ULIDs, and the `exists` table reference is malformed.
-- **Update can move a recipient to another form**, because `form_id` is fillable and accepted in the request.
-- **Default mismatch.** The database defaults `enabled` to `true`, but the model's attribute default is `false`, so a recipient created through the API without `enabled` is stored as disabled.
-- **`error` is client-writable**, although it is meant to be system-reported.
-- **Non-standard namespace.** The notification class lives in `App\Notification` (singular) rather than Laravel's conventional `App\Notifications`, so `make:notification` output will land in a different directory.
+None currently.
 
 ## 9. Open questions
 

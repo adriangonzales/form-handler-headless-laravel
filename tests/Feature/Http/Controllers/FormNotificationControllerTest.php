@@ -104,6 +104,19 @@ it('creates a new form notification', function (): void {
     $formNotification = $formNotifications->first();
 });
 
+it('enables a new form notification by default', function (): void {
+    $this->actingAs($this->user);
+
+    $response = $this->postJson(route('forms.notifications.store', $this->form), [
+        'type' => 'email',
+        'value' => 'alerts@example.com',
+    ]);
+
+    $response->assertCreated();
+    $response->assertJsonPath('data.enabled', true);
+    expect($this->form->notifications()->sole()->enabled)->toBeTrue();
+});
+
 it('includes timestamps in the form notification resource', function (): void {
     $this->actingAs($this->user);
 
@@ -121,3 +134,68 @@ it('includes timestamps in the form notification resource', function (): void {
         ],
     ]);
 });
+
+it('updates a form notification', function (): void {
+    $this->actingAs($this->user);
+
+    $notification = FormNotification::factory()->create(['form_id' => $this->form->id, 'type' => 'sms', 'enabled' => false]);
+
+    $response = $this->putJson(route('notifications.update', $notification), [
+        'type' => 'email',
+        'value' => 'alerts@example.com',
+        'enabled' => true,
+    ]);
+
+    $response->assertOk();
+    $response->assertJson([
+        'data' => [
+            'id' => $notification->id,
+            'form_id' => $this->form->id,
+            'type' => 'email',
+            'value' => 'alerts@example.com',
+            'enabled' => true,
+        ],
+    ]);
+    expect($notification->fresh())
+        ->type->toBe('email')
+        ->value->toBe('alerts@example.com')
+        ->enabled->toBeTrue();
+});
+
+it('does not move a form notification to another form', function (): void {
+    $this->actingAs($this->user);
+
+    $notification = FormNotification::factory()->create(['form_id' => $this->form->id]);
+    $otherForm = Form::factory()->create(['user_id' => $this->user->id]);
+
+    $response = $this->putJson(route('notifications.update', $notification), [
+        'form_id' => $otherForm->id,
+        'type' => 'email',
+        'value' => 'alerts@example.com',
+        'enabled' => true,
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors('form_id');
+    expect($notification->fresh()->form_id)->toBe($this->form->id);
+});
+
+it('rejects a client-supplied error', function (string $method, string $routeName, bool $existing): void {
+    $this->actingAs($this->user);
+
+    $notification = FormNotification::factory()->create(['form_id' => $this->form->id, 'error' => null]);
+
+    $response = $this->json($method, route($routeName, $existing ? $notification : $this->form), [
+        'type' => 'email',
+        'value' => 'alerts@example.com',
+        'enabled' => true,
+        'error' => 'Mailbox full',
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors('error');
+    expect(FormNotification::where('error', 'Mailbox full')->exists())->toBeFalse();
+})->with([
+    'store' => ['POST', 'forms.notifications.store', false],
+    'update' => ['PUT', 'notifications.update', true],
+]);

@@ -38,12 +38,13 @@ class FormNotification extends Model
     }
 
     /**
-     * The model's default values for attributes.
+     * The model's default values for attributes. Matches the database default: a new recipient is
+     * alerted unless it is added disabled.
      *
      * @var array<string, mixed>
      */
     protected $attributes = [
-        'enabled' => false,
+        'enabled' => true,
     ];
 
     /**

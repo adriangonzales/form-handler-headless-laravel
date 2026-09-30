@@ -18,18 +18,19 @@ class FormNotificationUpdateRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Get the validation rules that apply to the request. A recipient belongs to one form for life, and
+     * error is reported by the system, so both are rejected rather than ignored.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'form_id' => ['required', 'integer', 'exists:forms.id,id'],
+            'form_id' => ['prohibited'],
             'type' => ['required', 'in:email,sms'],
             'value' => ['required', 'string'],
             'enabled' => ['required'],
-            'error' => ['nullable', 'string'],
+            'error' => ['prohibited'],
         ];
     }
 }
