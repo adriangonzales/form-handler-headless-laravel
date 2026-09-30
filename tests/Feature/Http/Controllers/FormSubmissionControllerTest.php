@@ -2,7 +2,9 @@
 
 use App\Events\FormEntryCreated;
 use App\Models\Form;
+use App\Models\FormNotification;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Queue;
 
 it('accepts a submission without authentication and responds with the redirect and message', function (): void {
     Event::fake();
@@ -58,6 +60,46 @@ it('responds with a null redirect and message when the form has no settings', fu
         'message' => null,
     ]);
 });
+
+it('stores a submission that fills in the honeypot as spam without alerting', function (): void {
+    Queue::fake();
+
+    $form = Form::factory()->active()->withBasicSchema()->create([
+        'settings' => ['honeypot_enabled' => true, 'honeypot_name' => 'website', 'message' => 'Thanks!'],
+    ]);
+    FormNotification::factory()->create(['form_id' => $form->id, 'type' => 'email', 'enabled' => true]);
+    [$nameField, $emailField, $messageField] = array_keys($form->schema);
+
+    $response = $this->postJson(route('forms.submissions.store', $form), [
+        $nameField => 'Bot',
+        $emailField => 'bot@example.com',
+        $messageField => 'Buy now',
+        'website' => 'https://spam.example',
+    ]);
+
+    $response->assertCreated();
+    $response->assertExactJson(['data' => ['redirect' => null, 'message' => 'Thanks!']]);
+
+    $entry = $form->entries()->sole();
+    expect($entry->spam)->toBeTrue();
+    expect($entry->spam_reason)->toBe('Honeypot field was filled in.');
+    expect($entry->input)->not->toHaveKey('website');
+    Queue::assertNothingPushed();
+});
+
+it('accepts a submission as not spam when the honeypot is empty or disabled', function (array $settings, array $extraInput): void {
+    $form = Form::factory()->active()->create(['settings' => $settings]);
+
+    $this->postJson(route('forms.submissions.store', $form), $extraInput)->assertCreated();
+
+    $entry = $form->entries()->sole();
+    expect($entry->spam)->toBeFalse();
+    expect($entry->spam_reason)->toBeNull();
+})->with([
+    'honeypot left empty' => [['honeypot_enabled' => true, 'honeypot_name' => 'website'], ['website' => '']],
+    'honeypot omitted' => [['honeypot_enabled' => true, 'honeypot_name' => 'website'], []],
+    'honeypot disabled' => [['honeypot_enabled' => false, 'honeypot_name' => 'website'], ['website' => 'https://spam.example']],
+]);
 
 it('validates a submission against the form schema', function (): void {
     $form = Form::factory()->active()->withBasicSchema()->create();

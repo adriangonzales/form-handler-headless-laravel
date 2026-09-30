@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Concerns\FormSettingsValidationRules;
+use App\Models\Form;
+use Closure;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -23,6 +25,16 @@ class FormUpdateRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $form = $this->route('form');
+
+        $this->fillDefaultHoneypotName($form instanceof Form ? $form : null);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -35,5 +47,17 @@ class FormUpdateRequest extends FormRequest
             'schema' => ['nullable', 'array'],
             ...$this->settingsRules(),
         ];
+    }
+
+    /**
+     * Get the "after" validation callables for the request.
+     *
+     * @return array<int, Closure>
+     */
+    public function after(): array
+    {
+        $form = $this->route('form');
+
+        return [$this->honeypotNameCheck($form instanceof Form ? $form : null)];
     }
 }

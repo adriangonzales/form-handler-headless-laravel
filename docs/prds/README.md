@@ -39,7 +39,7 @@ User (account holder)
 | Form CRUD (list, show, create, update, delete, restore, duplicate) | Built                                                                                                                          |
 | Schema-driven submission validation                                | Built                                                                                                                          |
 | Entry list / show / update                                         | Built, not scoped to owner                                                                                                     |
-| Public (unauthenticated) submissions                               | Built. Restricted by `settings.domains` via `Referer` and rate limited; no spam protection                                     |
+| Public (unauthenticated) submissions                               | Built. Restricted by `settings.domains` via `Referer`, rate limited, optional honeypot; no CAPTCHA                             |
 | Ownership authorization                                            | Enforced on every form endpoint (list, show, update, delete, restore, duplicate). **Not enforced** on entries or notifications |
 | Notifications on new entry                                         | **Not built.** Recipients can be stored; nothing is sent                                                                       |
 | Spam detection, IP geolocation, UA parsing                         | **Not built.** Columns exist, placeholders only                                                                                |

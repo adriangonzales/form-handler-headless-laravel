@@ -22,10 +22,10 @@ final class FormSettings extends Data
         public ?array $domains = [],
         #[Max(2000)]
         public ?string $message = null,
+        public bool $honeypot_enabled = false,
+        public ?string $honeypot_name = null,
         // TODO: CAPTCHA type (none, recaptcha, hcaptcha)
         // TODO: CAPTCHA secret key
-        // TODO: HoneyPot Enabled
-        // TODO: HoneyPot Name
     ) {}
 
     /**
@@ -38,7 +38,24 @@ final class FormSettings extends Data
         return [
             'domains' => ['nullable', 'array', 'list'],
             'domains.*' => ['required', 'string', 'max:253', 'regex:/^(?=.{1,253}$)(\*\.)?([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/i'],
+            'honeypot_name' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9_-]+$/'],
         ];
+    }
+
+    /**
+     * Determine whether the submitted input trips the honeypot: it is enabled and its field has a value.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    public function honeypotTripped(array $input): bool
+    {
+        if (! $this->honeypot_enabled || $this->honeypot_name === null) {
+            return false;
+        }
+
+        $value = $input[$this->honeypot_name] ?? null;
+
+        return $value !== null && $value !== '' && $value !== [];
     }
 
     /**

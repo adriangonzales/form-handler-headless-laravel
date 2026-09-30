@@ -16,13 +16,21 @@ class FormSubmissionController extends Controller
      * Responds with the form's `redirect` and `message` settings so the client can show the
      * success message or navigate to the redirect itself; no 3XX redirect is ever sent.
      *
+     * A submission that fills in the form's honeypot field gets the same response, so bots cannot
+     * tell, but is stored flagged as spam.
+     *
      * @unauthenticated
      */
     public function __invoke(FormSubmissionRequest $request, Form $form, CreateFormEntry $createFormEntry): JsonResponse
     {
-        $createFormEntry($form, $request->validated(), $request);
-
         $settings = $form->settings ?? new FormSettings;
+
+        $createFormEntry(
+            $form,
+            $request->validated(),
+            $request,
+            $settings->honeypotTripped($request->all()) ? 'Honeypot field was filled in.' : null,
+        );
 
         return response()->json([
             'data' => [

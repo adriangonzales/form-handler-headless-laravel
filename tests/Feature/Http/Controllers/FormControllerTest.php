@@ -120,6 +120,8 @@ it('creates a new form', function (): void {
         'timezone' => null,
         'domains' => [],
         'message' => null,
+        'honeypot_enabled' => false,
+        'honeypot_name' => null,
     ], $form->settings->toArray());
 
     Event::assertDispatched(FormCreated::class, function ($event) use ($form) {
@@ -318,6 +320,8 @@ it('stores and returns every form setting', function (): void {
         'timezone' => 'America/Chicago',
         'domains' => ['example.com', '*.example.org'],
         'message' => 'Thanks, we will be in touch.',
+        'honeypot_enabled' => true,
+        'honeypot_name' => 'website',
     ];
 
     $response = $this->postJson(route('forms.store'), [
@@ -348,6 +352,8 @@ it('fills in defaults for omitted form settings', function (): void {
         'timezone' => 'UTC',
         'domains' => [],
         'message' => null,
+        'honeypot_enabled' => false,
+        'honeypot_name' => null,
     ]);
 });
 
@@ -370,6 +376,112 @@ it('rejects invalid form settings', function (array $settings, string $errorKey)
     'domain is not a hostname' => [['domains' => ['https://example.com/path']], 'settings.domains.0'],
     'domain is not a string' => [['domains' => [123]], 'settings.domains.0'],
     'message is too long' => [['message' => str_repeat('a', 2001)], 'settings.message'],
+    'honeypot enabled is not a boolean' => [['honeypot_enabled' => 'yes please'], 'settings.honeypot_enabled'],
+    'honeypot name is not a field name' => [['honeypot_enabled' => true, 'honeypot_name' => 'contact.website'], 'settings.honeypot_name'],
+]);
+
+it('generates a honeypot name when the honeypot is enabled without one', function (?string $honeypotName): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $response = $this->postJson(route('forms.store'), [
+        'name' => fake()->name(),
+        'settings' => ['honeypot_enabled' => true, 'honeypot_name' => $honeypotName],
+    ]);
+
+    $response->assertCreated();
+
+    $generatedName = $user->forms()->sole()->settings->honeypot_name;
+    expect($generatedName)->toMatch('/^(website|homepage|url|company)_[a-z0-9]{6}$/');
+    $response->assertJsonPath('data.settings.honeypot_name', $generatedName);
+})->with([
+    'omitted' => [null],
+    'empty' => [''],
+]);
+
+it('does not generate a honeypot name when the honeypot is disabled', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $this->postJson(route('forms.store'), [
+        'name' => fake()->name(),
+        'settings' => ['honeypot_enabled' => false],
+    ])->assertCreated();
+
+    expect($user->forms()->sole()->settings->honeypot_name)->toBeNull();
+});
+
+it('keeps the stored honeypot name when settings are updated without one', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $form = Form::factory()->create([
+        'user_id' => $user->id,
+        'settings' => ['honeypot_enabled' => true, 'honeypot_name' => 'website_abc123'],
+    ]);
+
+    $this->putJson(route('forms.update', $form), [
+        'name' => $form->name,
+        'active' => true,
+        'settings' => ['honeypot_enabled' => true, 'message' => 'Thanks!'],
+    ])->assertOk();
+
+    expect($form->fresh()->settings->honeypot_name)->toBe('website_abc123');
+});
+
+it('rejects a honeypot name that matches a schema field when creating a form', function (array $schema): void {
+    $this->actingAs(User::factory()->create());
+
+    $response = $this->postJson(route('forms.store'), [
+        'name' => fake()->name(),
+        'schema' => $schema,
+        'settings' => ['honeypot_enabled' => true, 'honeypot_name' => 'website'],
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['settings.honeypot_name' => 'The honeypot name must not match a schema field.']);
+})->with([
+    'field ID' => [['website' => ['label' => 'Website']]],
+    'field name override' => [['field_1' => ['name' => 'website', 'label' => 'Website']]],
+]);
+
+it('accepts a honeypot name that only matches an overridden field ID', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    $response = $this->postJson(route('forms.store'), [
+        'name' => fake()->name(),
+        'schema' => ['website' => ['name' => 'url', 'label' => 'Website']],
+        'settings' => ['honeypot_enabled' => true, 'honeypot_name' => 'website'],
+    ]);
+
+    $response->assertCreated();
+});
+
+it('checks the honeypot name against the stored schema or settings when updating a form', function (array $stored, array $sent, string $errorKey): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $form = Form::factory()->create(['user_id' => $user->id, ...$stored]);
+
+    $response = $this->putJson(route('forms.update', $form), [
+        'name' => $form->name,
+        'active' => true,
+        ...$sent,
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors($errorKey);
+})->with([
+    'new settings clash with stored schema' => [
+        ['schema' => ['website' => ['label' => 'Website']]],
+        ['settings' => ['honeypot_enabled' => true, 'honeypot_name' => 'website']],
+        'settings.honeypot_name',
+    ],
+    'new schema clashes with stored settings' => [
+        ['settings' => ['honeypot_enabled' => true, 'honeypot_name' => 'website']],
+        ['schema' => ['website' => ['label' => 'Website']]],
+        'schema',
+    ],
 ]);
 
 it('validates settings when updating a form', function (): void {
