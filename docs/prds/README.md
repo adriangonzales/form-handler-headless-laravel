@@ -1,6 +1,6 @@
 # Product Requirements — Headless Form Handler
 
-These documents describe the system **as it is currently built** (as of 2026-09-27, commit `74479bf`). They are descriptive, not aspirational: each PRD records what the product does today, and calls out known gaps, bugs, and open questions separately so they can be turned into future work.
+These documents describe the system **as it is currently built** (as of 2026-09-29, commit `5649639`). They are descriptive, not aspirational: each PRD records what the product does today, and calls out known gaps, bugs, and open questions separately so they can be turned into future work.
 
 ## Product summary
 
@@ -15,7 +15,7 @@ The service is headless: there is no web interface. Account holders authenticate
 | [Forms](forms.md)                                           | Creating and managing form definitions, the field schema, and settings                    |
 | [Form Entries](form-entries.md)                             | Accepting submissions, validation against the schema, captured metadata, triaging entries |
 | [Form Notifications](form-notifications.md)                 | Per-form email/SMS notification recipients and new-entry alerts                           |
-| [Accounts & Authentication](accounts-and-authentication.md) | JWT login, refresh, logout and current-user endpoints |
+| [Accounts & Authentication](accounts-and-authentication.md) | JWT login, refresh, logout and current-user endpoints                                     |
 
 ## System at a glance
 
@@ -34,17 +34,19 @@ User (account holder)
 
 ## Cross-cutting status
 
-| Capability                                                         | Status                                                                                |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| Form CRUD (list, show, create, update, delete, restore, duplicate) | Built                                                                                 |
-| Schema-driven submission validation                                | Built                                                                                 |
-| Entry list / show / update                                         | Built, not scoped to owner                                                            |
-| Public (unauthenticated) submissions                               | **Not built.** Submission requires an API token                                       |
-| Ownership authorization                                            | Enforced on form show/update. **Not enforced** on entries or notifications            |
-| Notifications on new entry                                         | **Not built.** Recipients can be stored; nothing is sent                              |
-| Spam detection, IP geolocation, UA parsing                         | **Not built.** Columns exist, placeholders only                                       |
-| Delete / restore / duplicate via API                               | Built for forms. Not built for entries or notifications                               |
-| Self-service registration                                          | Disabled                                                                              |
+| Capability                                                         | Status                                                                                                                         |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| Form CRUD (list, show, create, update, delete, restore, duplicate) | Built                                                                                                                          |
+| Schema-driven submission validation                                | Built                                                                                                                          |
+| Entry list / show / update                                         | Built, not scoped to owner                                                                                                     |
+| Public (unauthenticated) submissions                               | **Not built.** Submitting requires an account's JWT                                                                            |
+| Ownership authorization                                            | Enforced on every form endpoint (list, show, update, delete, restore, duplicate). **Not enforced** on entries or notifications |
+| Notifications on new entry                                         | **Not built.** Recipients can be stored; nothing is sent                                                                       |
+| Spam detection, IP geolocation, UA parsing                         | **Not built.** Columns exist, placeholders only                                                                                |
+| Delete / restore / duplicate via API                               | Built for forms. Not built for entries or notifications                                                                        |
+| Authentication                                                     | Built: JWT login, refresh, logout, current user                                                                                |
+| Account management (registration, password reset, profile)         | **Not built.** Accounts are created by an operator                                                                             |
+| Web interface                                                      | None. Headless by design                                                                                                       |
 
 ## Conventions used in these PRDs
 

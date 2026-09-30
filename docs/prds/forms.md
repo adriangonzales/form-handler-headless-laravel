@@ -1,6 +1,6 @@
 # PRD: Forms
 
-**Status:** Built (API only) · **Owner area:** `FormController`, `Form` model, `BuildValidationRules`
+**Status:** Built (API only) · **Owner area:** `FormController`, `Form` model, `FormPolicy`, `BuildValidationRules`, `DuplicateForm`, `FormSettings`
 
 ## 1. Summary
 
@@ -50,7 +50,7 @@ Relationships: belongs to a `User`; has many `FormEntry`; has many `FormNotifica
 | `rules` | No       | Laravel validation rules, either an array or a comma-separated string. Defaults to `["sometimes"]` |
 | `name`  | No       | Overrides the input name used for validation. Defaults to the field ID                             |
 
-The factory's `withBasicSchema()` state and the tests use ULIDs as field IDs, but any string key works.
+The factory's `withBasicSchema()` state and the tests use ULIDs as field IDs, but any string key works. An empty schema is stored and returned as `[]` rather than `{}`.
 
 ## 5a. Settings format
 
@@ -104,8 +104,7 @@ The form is created under the authenticated user, `active` defaults to `false`, 
 
 **FR-9 Restore a form.** `POST /api/v1/forms/{form}/restore` clears `deleted_at` and returns `200` with the form resource. The route resolves soft-deleted forms. Owner only (`FormPolicy::restore`).
 
-**FR-10 Duplicate a form.** `POST /api/v1/forms/{form}/duplicate` creates a new form owned by the same user, with the same `schema` and `settings`, the name suffixed with ` (copy)` (the original is truncated if needed to stay within 400 characters), and `active = false`. Entries and notification recipients are not copied. Dispatches `FormCreated` and returns `201` with the new form. Owner only (`FormPolicy::view`).
-
+**FR-10 Duplicate a form.** `POST /api/v1/forms/{form}/duplicate` creates a new form owned by the same user, with the same `schema` and `settings`, the name suffixed with ` (copy)` (the original is truncated if needed to stay within 400 characters), and `active = false`. Entries and notification recipients are not copied. The copy is made by the `App\Actions\Forms\DuplicateForm` action, which dispatches `FormCreated`. Returns `201` with the new form. Owner only (`FormPolicy::view`).
 
 ## 7. Events
 
@@ -120,6 +119,7 @@ The form is created under the authenticated user, `active` defaults to `false`, 
 
 - **`name` override vs. display mapping.** Validation keys data by `name ?? fieldId`, but `MapFormData` looks values up by field ID. For any field that sets `name`, the mapped `data` will be `null`.
 - **Unvalidated rule strings.** Rules from the schema are passed straight to the validator. An invalid rule name causes a server error at submission time rather than a 422 at form-save time.
+- **`active` accepts any value.** The update rule is only `required`, with no `boolean` rule, so values such as `"yes"` or `"banana"` are accepted and cast to `true`.
 - **Blueprint drift.** `draft.yaml` specifies `limit:10` and newest-first ordering; the code uses 15 per page, oldest first by default (newest first is available with `sort=-created_at`).
 
 ## 10. Open questions

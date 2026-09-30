@@ -74,6 +74,7 @@ The calls that would send them are commented out in `FormEntryController::store`
 - **Update can move a recipient to another form**, because `form_id` is fillable and accepted in the request.
 - **Default mismatch.** The database defaults `enabled` to `true`, but the model's attribute default is `false`, so a recipient created through the API without `enabled` is stored as disabled.
 - **`error` is client-writable**, although it is meant to be system-reported.
+- **Non-standard namespace.** The notification class lives in `App\Notification` (singular) rather than Laravel's conventional `App\Notifications`, so `make:notification` output will land in a different directory.
 
 ## 9. Open questions
 

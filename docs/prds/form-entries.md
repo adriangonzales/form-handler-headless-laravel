@@ -8,7 +8,7 @@ A Form Entry is one submission to a form. The service validates submitted fields
 
 ## 2. Users
 
-- **Submitter** — an end user filling in a form on a third-party site. Today they cannot submit directly (see Gaps); submissions must be made with an API token.
+- **Submitter** — an end user filling in a form on a third-party site. Today they cannot submit directly (see Gaps); submissions must be made with an account's JWT.
 - **Account holder** — reviews and triages entries for their forms.
 
 ## 3. Goals
@@ -49,7 +49,7 @@ Table `form_entries`:
 - A `FormEntryCreated` event is dispatched (no listeners are registered).
 - Responds `201` with the entry resource.
 
-**FR-2 List entries.** `GET /api/v1/forms/{form}/entries` returns entries oldest first, paginated (15 per page), with `links` and `meta`.
+**FR-2 List entries.** `GET /api/v1/forms/{form}/entries` returns entries oldest first, paginated (15 per page), with `links` and `meta`. The `{form}` parameter only has to exist: entries from **every** form are returned (see Gaps).
 
 **FR-3 Show an entry.** `GET /api/v1/entries/{entry}` (shallow route).
 
@@ -76,7 +76,7 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 - **No IP geolocation or user-agent parsing** for the `*_display` fields.
 - **No filtering or sorting** (unread, starred, spam, date range) and no newest-first option.
 - **No delete, bulk actions, or export.**
-- Pending tests (`todo`): form/entry ID match, starring, marking read, marking unread.
+- Pending tests (`todo`): form/entry ID match, starring, marking read, marking unread, soft delete, restore and hard delete. The last three have no endpoints yet.
 
 ## 7. Known issues
 

@@ -56,6 +56,7 @@ All under `/api/v1/auth`.
 ## 6. Known issues
 
 - The `sessions` and `password_reset_tokens` tables are still created by the base migration but are no longer used.
+- `AppServiceProvider` still configures `Password::defaults()` (a strict policy in production) and `config/auth.php` still defines a password broker, but no endpoint sets or resets a password, so neither has any effect.
 - Authorization between users is not enforced on the entry and notification endpoints; see [Form Entries](form-entries.md) and [Form Notifications](form-notifications.md).
 
 ## 7. Open questions
