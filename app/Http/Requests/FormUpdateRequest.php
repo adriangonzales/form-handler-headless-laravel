@@ -31,7 +31,7 @@ class FormUpdateRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:400'],
-            'active' => ['required'],
+            'active' => ['required', 'boolean'],
             'schema' => ['nullable', 'array'],
             ...$this->settingsRules(),
         ];

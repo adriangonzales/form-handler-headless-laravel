@@ -168,6 +168,22 @@ it('updates a form', function (): void {
     $this->assertEquals($active, $form->active);
 });
 
+it('rejects a non-boolean active value when updating a form', function (string $active): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $form = Form::factory()->inactive()->create(['user_id' => $user->id]);
+
+    $response = $this->putJson(route('forms.update', $form), [
+        'name' => $form->name,
+        'active' => $active,
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors('active');
+    expect($form->refresh()->active)->toBeFalse();
+})->with(['banana', 'yes']);
+
 it('forbids updating a form owned by another user', function (): void {
     $this->actingAs(User::factory()->create());
 

@@ -95,13 +95,13 @@ The factory's `withBasicSchema()` state and the tests use ULIDs as field IDs, bu
 
 The form is created under the authenticated user, `active` defaults to `false`, a `FormCreated` event is dispatched, and the response is `201` with the form resource.
 
-**FR-4 Update a form.** `PUT/PATCH /api/v1/forms/{form}` accepts `name` (required, string, max 400), `active` (required), `schema` (nullable, array), `settings` (nullable, object matching §5a). Because `name` and `active` are required, a PATCH is effectively a full replacement of those two fields. Only the owner may update a form (`FormPolicy::update`, checked in `FormUpdateRequest` before validation); anyone else receives the same 403.
+**FR-4 Update a form.** `PUT/PATCH /api/v1/forms/{form}` accepts `name` (required, string, max 400), `active` (required, boolean), `schema` (nullable, array), `settings` (nullable, object matching §5a). Because `name` and `active` are required, a PATCH is effectively a full replacement of those two fields. Only the owner may update a form (`FormPolicy::update`, checked in `FormUpdateRequest` before validation); anyone else receives the same 403.
 
 **FR-5 Schema → validation rules.** `BuildValidationRules` converts the schema into a Laravel rules array keyed by `name ?? fieldId`. String rules are split on commas. Fields without rules get `sometimes`. An empty or null schema produces no rules.
 
 **FR-6 Inactive forms reject submissions.** Entries can only be submitted to forms with `active = true` (`FormPolicy::submit`). Submissions to an inactive form receive `403 {"message":"This form is not accepting submissions."}` before any validation runs, and no entry is stored.
 
-**FR-7 Entry display mapping.** `MapFormData` pairs each schema field with an entry's value, producing `{ fieldId: { label, data } }`. It is not yet used by any endpoint.
+**FR-7 Entry display mapping.** `MapFormData` pairs each schema field with an entry's value, producing `{ fieldId: { label, data } }`. Values are looked up under the field's `name` when it has one, otherwise its field ID, matching how submissions are stored. It builds the field list in new-entry alert emails ([Form Notifications](form-notifications.md)).
 
 **FR-8 Delete a form.** `DELETE /api/v1/forms/{form}` soft-deletes the form and returns `204`. Its entries and notifications are left untouched. A deleted form returns 404 from every other form endpoint (including submissions) until it is restored. Owner only (`FormPolicy::delete`). There is no permanent delete (`FormPolicy::forceDelete` denies).
 
@@ -115,14 +115,11 @@ The form is created under the authenticated user, `active` defaults to `false`, 
 
 ## 8. Gaps
 
-- **Settings are stored but not yet acted on.** `redirect`, `timezone` and `domains` are validated and returned, but no submission, notification or display logic reads them yet. Each depends on other work: `redirect` and `domains` on a public submission endpoint ([Form Entries](form-entries.md)), `timezone` on notification delivery ([Form Notifications](form-notifications.md)).
+- **Settings are stored but not yet acted on.** `redirect`, `timezone` and `domains` are validated and returned, but no submission, notification or display logic reads them yet. `redirect` and `domains` depend on a public submission endpoint ([Form Entries](form-entries.md)). `timezone` could now be applied to alert emails, which show submission times in UTC ([Form Notifications](form-notifications.md)).
 
 ## 9. Known issues
 
-- **`name` override vs. display mapping.** Validation keys the entry's `input` by `name ?? fieldId`, but `MapFormData` looks values up by field ID. For any field that sets `name`, the mapped `data` will be `null`.
 - **Unvalidated rule strings.** Rules from the schema are passed straight to the validator. An invalid rule name causes a server error at submission time rather than a 422 at form-save time.
-- **`active` accepts any value.** The update rule is only `required`, with no `boolean` rule, so values such as `"yes"` or `"banana"` are accepted and cast to `true`.
-- **Blueprint drift.** `draft.yaml` specifies `limit:10` and newest-first ordering; the code uses 15 per page, oldest first by default (newest first is available with `sort=-created_at`).
 
 ## 10. Open questions
 
