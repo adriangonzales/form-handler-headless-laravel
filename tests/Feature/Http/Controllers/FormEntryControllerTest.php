@@ -204,12 +204,182 @@ it('includes timestamps in the form entry resource', function (): void {
     ]);
 });
 
+it('sorts the entry index by created_at', function (?string $sort, array $expectedOrder): void {
+    $this->actingAs($this->user);
+
+    $entries = collect(['2026-01-01', '2026-03-01', '2026-02-01'])
+        ->map(function (string $date): FormEntry {
+            $this->travelTo($date);
+
+            return FormEntry::factory()->create(['form_id' => $this->form->id]);
+        });
+
+    $response = $this->getJson(route('forms.entries.index', [$this->form, ...array_filter(['sort' => $sort])]));
+
+    $response->assertOk();
+
+    expect($response->json('data.*.id'))
+        ->toBe(array_map(fn (int $index): string => $entries[$index]->id, $expectedOrder));
+})->with([
+    'default is oldest first' => [null, [0, 2, 1]],
+    'ascending' => ['created_at', [0, 2, 1]],
+    'descending' => ['-created_at', [1, 2, 0]],
+]);
+
+it('sorts the entry index by spam_score', function (string $sort, array $expectedScores): void {
+    $this->actingAs($this->user);
+
+    foreach ([0.5, 0.9, 0.1] as $score) {
+        FormEntry::factory()->create(['form_id' => $this->form->id, 'spam_score' => $score]);
+    }
+
+    $response = $this->getJson(route('forms.entries.index', [$this->form, 'sort' => $sort]));
+
+    $response->assertOk();
+
+    expect($response->json('data.*.spam_score'))->toBe($expectedScores);
+})->with([
+    'ascending' => ['spam_score', ['0.10', '0.50', '0.90']],
+    'descending' => ['-spam_score', ['0.90', '0.50', '0.10']],
+]);
+
+it('filters the entry index by read state', function (string $value, bool $expectRead): void {
+    $this->actingAs($this->user);
+
+    $read = FormEntry::factory()->create(['form_id' => $this->form->id, 'read_at' => now()]);
+    $unread = FormEntry::factory()->create(['form_id' => $this->form->id, 'read_at' => null]);
+
+    $response = $this->getJson(route('forms.entries.index', [$this->form, 'filter' => ['read' => $value]]));
+
+    $response->assertOk();
+
+    expect($response->json('data.*.id'))->toBe([($expectRead ? $read : $unread)->id]);
+})->with([
+    'read' => ['true', true],
+    'unread' => ['0', false],
+]);
+
+it('filters the entry index by starred', function (string $value, bool $expectStarred): void {
+    $this->actingAs($this->user);
+
+    $starred = FormEntry::factory()->create(['form_id' => $this->form->id, 'starred' => true]);
+    $unstarred = FormEntry::factory()->create(['form_id' => $this->form->id, 'starred' => false]);
+
+    $response = $this->getJson(route('forms.entries.index', [$this->form, 'filter' => ['starred' => $value]]));
+
+    $response->assertOk();
+
+    expect($response->json('data.*.id'))->toBe([($expectStarred ? $starred : $unstarred)->id]);
+})->with([
+    'starred' => ['1', true],
+    'not starred' => ['false', false],
+]);
+
+it('filters the entry index by spam, treating unchecked entries as not spam', function (string $value, array $expectedKeys): void {
+    $this->actingAs($this->user);
+
+    $entries = [
+        'spam' => FormEntry::factory()->create(['form_id' => $this->form->id, 'spam' => true]),
+        'ham' => FormEntry::factory()->create(['form_id' => $this->form->id, 'spam' => false]),
+        'unchecked' => FormEntry::factory()->create(['form_id' => $this->form->id, 'spam' => null]),
+    ];
+
+    $response = $this->getJson(route('forms.entries.index', [$this->form, 'filter' => ['spam' => $value]]));
+
+    $response->assertOk();
+
+    expect($response->json('data.*.id'))
+        ->toBe(array_map(fn (string $key): string => $entries[$key]->id, $expectedKeys));
+})->with([
+    'spam' => ['true', ['spam']],
+    'not spam' => ['false', ['ham', 'unchecked']],
+]);
+
+it('filters the entry index by an inclusive created date range', function (): void {
+    $this->actingAs($this->user);
+
+    $entries = collect([
+        '2026-01-31 23:59:59',
+        '2026-02-01 00:00:00',
+        '2026-02-28 23:59:59',
+        '2026-03-01 00:00:00',
+    ])->map(function (string $date): FormEntry {
+        $this->travelTo($date);
+
+        return FormEntry::factory()->create(['form_id' => $this->form->id]);
+    });
+
+    $response = $this->getJson(route('forms.entries.index', [
+        $this->form,
+        'filter' => ['created_from' => '2026-02-01', 'created_to' => '2026-02-28'],
+    ]));
+
+    $response->assertOk();
+
+    expect($response->json('data.*.id'))->toBe([$entries[1]->id, $entries[2]->id]);
+});
+
+it('combines entry filters with sorting', function (): void {
+    $this->actingAs($this->user);
+
+    $this->travelTo('2026-01-01');
+    $older = FormEntry::factory()->create(['form_id' => $this->form->id, 'read_at' => null, 'starred' => true]);
+    $this->travelTo('2026-01-02');
+    $newer = FormEntry::factory()->create(['form_id' => $this->form->id, 'read_at' => null, 'starred' => true]);
+    FormEntry::factory()->create(['form_id' => $this->form->id, 'read_at' => now(), 'starred' => true]);
+    FormEntry::factory()->create(['form_id' => $this->form->id, 'read_at' => null, 'starred' => false]);
+
+    $response = $this->getJson(route('forms.entries.index', [
+        $this->form,
+        'sort' => '-created_at',
+        'filter' => ['read' => 'false', 'starred' => 'true'],
+    ]));
+
+    $response->assertOk();
+
+    expect($response->json('data.*.id'))->toBe([$newer->id, $older->id]);
+});
+
+it('keeps the sort and filters in entry pagination links', function (): void {
+    $this->actingAs($this->user);
+
+    FormEntry::factory()->count(16)->create(['form_id' => $this->form->id, 'starred' => true]);
+
+    $response = $this->getJson(route('forms.entries.index', [
+        $this->form,
+        'sort' => '-created_at',
+        'filter' => ['starred' => 'true'],
+    ]));
+
+    $response->assertOk();
+
+    expect(urldecode($response->json('links.next')))
+        ->toContain('sort=-created_at')
+        ->toContain('filter[starred]=true');
+});
+
+it('rejects an invalid entry sort or filter', function (array $query, string $errorKey): void {
+    $this->actingAs($this->user);
+
+    $response = $this->getJson(route('forms.entries.index', [$this->form, ...$query]));
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors($errorKey);
+})->with([
+    'unsupported sort' => [['sort' => 'ip'], 'sort'],
+    'combined sort' => [['sort' => 'created_at,-spam_score'], 'sort'],
+    'unknown filter' => [['filter' => ['ip' => '127.0.0.1']], 'filter'],
+    'invalid boolean' => [['filter' => ['starred' => 'yes']], 'filter.starred'],
+    'invalid date' => [['filter' => ['created_from' => '2026-02-01T00:00:00']], 'filter.created_from'],
+    'reversed range' => [['filter' => ['created_from' => '2026-02-02', 'created_to' => '2026-02-01']], 'filter.created_to'],
+]);
+
 it('forbids listing entries for a form the user does not own', function (): void {
     $this->actingAs(User::factory()->create());
 
     FormEntry::factory()->create(['form_id' => $this->form->id]);
 
-    $response = $this->getJson(route('forms.entries.index', $this->form));
+    $response = $this->getJson(route('forms.entries.index', [$this->form, 'sort' => 'invalid']));
 
     $response->assertForbidden();
     $response->assertJson(['message' => 'You do not own this form.']);

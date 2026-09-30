@@ -49,7 +49,10 @@ Table `form_entries`:
 - A `FormEntryCreated` event is dispatched (no listeners are registered).
 - Responds `201` with the entry resource.
 
-**FR-2 List entries.** `GET /api/v1/forms/{form}/entries` returns that form's entries oldest first, paginated (15 per page), with `links` and `meta`.
+**FR-2 List entries.** `GET /api/v1/forms/{form}/entries` returns that form's entries, paginated (15 per page), with `links` and `meta`. The sort and filters are kept in pagination links.
+
+- **Sorting:** the optional `sort` parameter accepts `created_at` (the default, oldest first) or `spam_score`. Prefix it with `-` for descending order, e.g. `sort=-created_at` for newest first. Ties are broken by ID in the same direction. Any other value, including combined sorts, returns 422 on `sort`.
+- **Filtering:** `filter[read]`, `filter[starred]` and `filter[spam]` accept `true`/`false` (`1`/`0` also work). `filter[read]=false` returns unread entries. `filter[spam]=false` includes entries whose spam check has not run (`spam` is `null`). `filter[created_from]` and `filter[created_to]` take `YYYY-MM-DD` dates and are inclusive whole days in UTC; `created_to` must not be before `created_from`. Invalid values return 422 on the filter's key, and unknown filter keys return 422 on `filter`. Filters combine with each other and with sorting.
 
 **FR-3 Show an entry.** `GET /api/v1/entries/{entry}` (shallow route).
 
@@ -74,7 +77,6 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 - **No public submission endpoint.** The store route is behind `auth:api`, so a browser form cannot post to it without exposing an account's JWT. The controller has a TODO to split out an inbound, public-facing endpoint. This is the most significant gap for a "headless form handler".
 - **No spam protection** (captcha, honeypot, rate limiting on submissions). Placeholders only.
 - **No IP geolocation or user-agent parsing** for the `*_display` fields.
-- **No filtering or sorting** (unread, starred, spam, date range) and no newest-first option.
 - **No delete, bulk actions, or export.**
 - Pending tests (`todo`): form/entry ID match, starring, marking read, marking unread, soft delete, restore and hard delete. The last three have no endpoints yet.
 

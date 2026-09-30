@@ -3,22 +3,40 @@
 namespace App\Http\Controllers;
 
 use App\Events\FormEntryCreated;
+use App\Http\Requests\FormEntryIndexRequest;
 use App\Http\Requests\FormEntryStoreRequest;
 use App\Http\Requests\FormEntryUpdateRequest;
 use App\Http\Resources\FormEntryCollection;
 use App\Http\Resources\FormEntryResource;
 use App\Models\Form;
 use App\Models\FormEntry;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Gate;
 
 class FormEntryController extends Controller
 {
-    public function index(Form $form): FormEntryCollection
+    public function index(FormEntryIndexRequest $request, Form $form): FormEntryCollection
     {
-        Gate::authorize('view', $form);
+        $read = $request->booleanFilter('read');
+        $starred = $request->booleanFilter('starred');
+        $spam = $request->booleanFilter('spam');
+        $createdFrom = $request->createdFrom();
+        $createdTo = $request->createdTo();
 
-        $formEntries = $form->entries()->oldest()
-            ->paginate();
+        $formEntries = $form->entries()
+            ->when($read === true, fn (Builder $query) => $query->whereNotNull('read_at'))
+            ->when($read === false, fn (Builder $query) => $query->whereNull('read_at'))
+            ->when($starred !== null, fn (Builder $query) => $query->where('starred', $starred))
+            ->when($spam === true, fn (Builder $query) => $query->where('spam', true))
+            ->when($spam === false, fn (Builder $query) => $query->where(
+                fn (Builder $query) => $query->where('spam', false)->orWhereNull('spam')
+            ))
+            ->when($createdFrom !== null, fn (Builder $query) => $query->where('created_at', '>=', $createdFrom))
+            ->when($createdTo !== null, fn (Builder $query) => $query->where('created_at', '<=', $createdTo))
+            ->orderBy($request->sortColumn(), $request->sortDirection())
+            ->orderBy('id', $request->sortDirection())
+            ->paginate()
+            ->withQueryString();
 
         return new FormEntryCollection($formEntries);
     }
