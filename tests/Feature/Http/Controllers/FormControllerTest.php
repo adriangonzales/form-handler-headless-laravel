@@ -432,4 +432,99 @@ it('rejects an unsupported sort', function (string $sort): void {
 
     $response->assertUnprocessable();
     $response->assertJsonValidationErrors('sort');
-})->with(['name', 'updated_at', 'created_at,-created_at', '--created_at']);
+})->with(['active', 'user_id', 'created_at,-name', '--created_at', 'NAME']);
+
+it('sorts the form index by updated_at', function (string $sort, array $expectedOrder): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $this->travelTo('2026-01-01');
+    $forms = Form::factory()->count(3)->create(['user_id' => $user->id])->values();
+
+    $this->travelTo('2026-03-01');
+    $forms[0]->touch();
+    $this->travelTo('2026-02-01');
+    $forms[2]->touch();
+
+    $response = $this->getJson(route('forms.index', ['sort' => $sort]));
+
+    $response->assertOk();
+    expect($response->json('data.*.id'))
+        ->toBe(array_map(fn (int $index): string => $forms[$index]->id, $expectedOrder));
+})->with([
+    'ascending' => ['updated_at', [1, 2, 0]],
+    'descending' => ['-updated_at', [0, 2, 1]],
+]);
+
+it('sorts the form index by name case-insensitively', function (string $sort, array $expectedNames): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    foreach (['banana', 'Cherry', 'apple'] as $name) {
+        Form::factory()->create(['user_id' => $user->id, 'name' => $name]);
+    }
+
+    $response = $this->getJson(route('forms.index', ['sort' => $sort]));
+
+    $response->assertOk();
+    expect($response->json('data.*.name'))->toBe($expectedNames);
+})->with([
+    'ascending' => ['name', ['apple', 'banana', 'Cherry']],
+    'descending' => ['-name', ['Cherry', 'banana', 'apple']],
+]);
+
+it('filters the form index by active', function (string $value, bool $expectedActive): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $active = Form::factory()->active()->create(['user_id' => $user->id]);
+    $inactive = Form::factory()->inactive()->create(['user_id' => $user->id]);
+
+    $response = $this->getJson(route('forms.index', ['filter' => ['active' => $value]]));
+
+    $response->assertOk();
+    expect($response->json('data.*.id'))->toBe([($expectedActive ? $active : $inactive)->id]);
+})->with([
+    'true' => ['true', true],
+    '1' => ['1', true],
+    'false' => ['false', false],
+    '0' => ['0', false],
+]);
+
+it('combines the active filter with sorting', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Form::factory()->active()->create(['user_id' => $user->id, 'name' => 'Beta']);
+    Form::factory()->active()->create(['user_id' => $user->id, 'name' => 'Alpha']);
+    Form::factory()->inactive()->create(['user_id' => $user->id, 'name' => 'Aardvark']);
+
+    $response = $this->getJson(route('forms.index', ['sort' => 'name', 'filter' => ['active' => 'true']]));
+
+    $response->assertOk();
+    expect($response->json('data.*.name'))->toBe(['Alpha', 'Beta']);
+});
+
+it('keeps the filter in pagination links', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Form::factory()->active()->count(16)->create(['user_id' => $user->id]);
+
+    $response = $this->getJson(route('forms.index', ['filter' => ['active' => 'true']]));
+
+    $response->assertOk();
+    expect(urldecode($response->json('links.next')))->toContain('filter[active]=true');
+});
+
+it('rejects an invalid filter', function (array $filter, string $errorKey): void {
+    $this->actingAs(User::factory()->create());
+
+    $response = $this->getJson(route('forms.index', ['filter' => $filter]));
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors($errorKey);
+})->with([
+    'unknown filter' => [['name' => 'Contact'], 'filter'],
+    'invalid active value' => [['active' => 'yes'], 'filter.active'],
+]);

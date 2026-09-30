@@ -11,11 +11,18 @@ use Illuminate\Validation\Rule;
 class FormIndexRequest extends FormRequest
 {
     /**
-     * Sort values accepted by the index, JSON:API style: a leading "-" means descending.
+     * Columns the index can be sorted by. Prefix with "-" to sort descending, JSON:API style.
      *
      * @var list<string>
      */
-    public const array SORTS = ['created_at', '-created_at'];
+    public const array SORTABLE = ['created_at', 'updated_at', 'name'];
+
+    /**
+     * Filters accepted under the "filter" query parameter.
+     *
+     * @var list<string>
+     */
+    public const array FILTERS = ['active'];
 
     /**
      * Determine if the user is authorized to make this request.
@@ -32,9 +39,23 @@ class FormIndexRequest extends FormRequest
      */
     public function rules(): array
     {
+        $sorts = collect(self::SORTABLE)
+            ->flatMap(fn (string $column): array => [$column, '-'.$column])
+            ->all();
+
         return [
-            'sort' => ['sometimes', 'string', Rule::in(self::SORTS)],
+            'sort' => ['sometimes', 'string', Rule::in($sorts)],
+            'filter' => ['sometimes', 'array:'.implode(',', self::FILTERS)],
+            'filter.active' => ['sometimes', Rule::in(['true', 'false', '1', '0'])],
         ];
+    }
+
+    /**
+     * Get the requested "active" filter, or null when the list is not filtered by it.
+     */
+    public function activeFilter(): ?bool
+    {
+        return $this->has('filter.active') ? $this->boolean('filter.active') : null;
     }
 
     /**

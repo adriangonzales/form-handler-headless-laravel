@@ -78,7 +78,10 @@ The factory's `withBasicSchema()` state and the tests use ULIDs as field IDs, bu
 
 ## 6. Functional requirements
 
-**FR-1 List forms.** `GET /api/v1/forms` returns the authenticated user's forms only, paginated (Laravel default of 15 per page) with `links` and `meta`. The optional `sort` query parameter orders the list: `created_at` (oldest first, the default) or `-created_at` (newest first). Ties are broken by ID in the same direction. Any other value returns 422 on `sort`. Pagination links keep the `sort` parameter.
+**FR-1 List forms.** `GET /api/v1/forms` returns the authenticated user's forms only, paginated (Laravel default of 15 per page) with `links` and `meta`. Pagination links keep all query parameters.
+
+- **Sorting:** the optional `sort` parameter accepts `created_at` (the default), `updated_at` or `name`. Prefix it with `-` for descending order, e.g. `sort=-updated_at`. Names are compared case-insensitively. Ties are broken by ID in the same direction. Any other value, including combined sorts such as `name,-created_at`, returns 422 on `sort`.
+- **Filtering:** `filter[active]=true` or `filter[active]=false` (`1` and `0` also work) limits the list to active or inactive forms. Any other value returns 422 on `filter.active`, and any other filter key returns 422 on `filter`. Filtering and sorting can be combined.
 
 **FR-2 Show a form.** `GET /api/v1/forms/{form}` returns `{ data: { id, user_id, name, active, schema, settings, created_at, updated_at, deleted_at } }`. `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` for any record the API can return. Only the owner may view a form; anyone else receives `403 {"message":"You do not own this form."}` (`FormPolicy::view`).
 
@@ -113,7 +116,6 @@ The form is created under the authenticated user, `active` defaults to `false`, 
 ## 8. Gaps
 
 - **Settings are stored but not yet acted on.** `redirect`, `timezone` and `domains` are validated and returned, but no submission, notification or display logic reads them yet. Each depends on other work: `redirect` and `domains` on a public submission endpoint ([Form Entries](form-entries.md)), `timezone` on notification delivery ([Form Notifications](form-notifications.md)).
-- **Sorting is limited to `created_at`.** There is no sorting by `name` or `updated_at`, and no filtering (e.g. by `active`).
 
 ## 9. Known issues
 

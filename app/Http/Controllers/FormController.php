@@ -10,16 +10,24 @@ use App\Http\Requests\FormUpdateRequest;
 use App\Http\Resources\FormCollection;
 use App\Http\Resources\FormResource;
 use App\Models\Form;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class FormController extends Controller
 {
     public function index(FormIndexRequest $request): FormCollection
     {
+        $activeFilter = $request->activeFilter();
+        $sortColumn = $request->sortColumn() === 'name'
+            ? DB::raw('lower(name)')
+            : $request->sortColumn();
+
         $forms = $request->user()->forms()
-            ->orderBy($request->sortColumn(), $request->sortDirection())
+            ->when($activeFilter !== null, fn (Builder $query) => $query->where('active', $activeFilter))
+            ->orderBy($sortColumn, $request->sortDirection())
             ->orderBy('id', $request->sortDirection())
             ->paginate()
             ->withQueryString();
