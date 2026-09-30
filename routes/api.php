@@ -24,9 +24,19 @@ Route::prefix('v1')->group(function () {
             ->name('forms.restore');
         Route::post('forms/{form}/duplicate', [FormController::class, 'duplicate'])
             ->name('forms.duplicate');
+        Route::get('forms/{form}/entries/export', [FormEntryController::class, 'export'])
+            ->name('forms.entries.export');
+        Route::post('forms/{form}/entries/bulk', [FormEntryController::class, 'bulk'])
+            ->name('forms.entries.bulk');
         Route::apiResource('forms.entries', FormEntryController::class)
-            ->only('index', 'show', 'store', 'update')
+            ->only('index', 'show', 'store', 'update', 'destroy')
             ->shallow();
+        Route::post('entries/{entry}/restore', [FormEntryController::class, 'restore'])
+            ->withTrashed()
+            ->name('entries.restore');
+        Route::delete('entries/{entry}/force', [FormEntryController::class, 'forceDestroy'])
+            ->withTrashed()
+            ->name('entries.force-destroy');
         Route::apiResource('forms.notifications', FormNotificationController::class)
             ->only('index', 'show', 'store', 'update')
             ->shallow();

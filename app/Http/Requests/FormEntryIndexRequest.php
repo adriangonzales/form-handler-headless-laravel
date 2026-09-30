@@ -25,7 +25,7 @@ class FormEntryIndexRequest extends FormRequest
      *
      * @var list<string>
      */
-    public const array FILTERS = ['read', 'starred', 'spam', 'created_from', 'created_to'];
+    public const array FILTERS = ['read', 'starred', 'spam', 'created_from', 'created_to', 'trashed'];
 
     /**
      * Determine if the user is authorized to make this request.
@@ -55,6 +55,7 @@ class FormEntryIndexRequest extends FormRequest
             'filter.spam' => ['sometimes', $booleans],
             'filter.created_from' => ['sometimes', 'date_format:Y-m-d'],
             'filter.created_to' => ['sometimes', 'date_format:Y-m-d', 'after_or_equal:filter.created_from'],
+            'filter.trashed' => ['sometimes', Rule::in(['with', 'only'])],
         ];
     }
 
@@ -86,6 +87,20 @@ class FormEntryIndexRequest extends FormRequest
         return $this->has('filter.created_to')
             ? $this->date('filter.created_to', 'Y-m-d')->endOfDay()
             : null;
+    }
+
+    /**
+     * Get whether deleted entries are included ("with") or listed alone ("only"), or null to exclude them.
+     *
+     * @return 'with'|'only'|null
+     */
+    public function trashedFilter(): ?string
+    {
+        return match ($this->input('filter.trashed')) {
+            'with' => 'with',
+            'only' => 'only',
+            default => null,
+        };
     }
 
     /**

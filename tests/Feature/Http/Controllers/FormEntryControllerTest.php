@@ -6,7 +6,29 @@ use App\Events\FormEntryCreated;
 use App\Models\Form;
 use App\Models\FormEntry;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Str;
+
+/**
+ * @return list<list<string>>
+ */
+function parseCsv(string $csv): array
+{
+    $handle = fopen('php://memory', 'r+');
+    fwrite($handle, $csv);
+    rewind($handle);
+
+    $rows = [];
+
+    while (($row = fgetcsv($handle, escape: '')) !== false) {
+        $rows[] = $row;
+    }
+
+    fclose($handle);
+
+    return $rows;
+}
 
 beforeEach(function (): void {
     $this->user = User::factory()->create();
@@ -372,6 +394,7 @@ it('rejects an invalid entry sort or filter', function (array $query, string $er
     'invalid boolean' => [['filter' => ['starred' => 'yes']], 'filter.starred'],
     'invalid date' => [['filter' => ['created_from' => '2026-02-01T00:00:00']], 'filter.created_from'],
     'reversed range' => [['filter' => ['created_from' => '2026-02-02', 'created_to' => '2026-02-01']], 'filter.created_to'],
+    'invalid trashed value' => [['filter' => ['trashed' => 'all']], 'filter.trashed'],
 ]);
 
 it('forbids listing entries for a form the user does not own', function (): void {
@@ -430,6 +453,289 @@ todo('Test that form and entry IDs match');
 todo('Test marking as starred');
 todo('Test marking as read');
 todo('Test marking as unread');
-todo('Test soft delete');
-todo('Test restore');
-todo('Test hard delete');
+it('soft deletes an entry', function (): void {
+    $this->actingAs($this->user);
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+
+    $response = $this->deleteJson(route('entries.destroy', $entry));
+
+    $response->assertNoContent();
+    $this->assertSoftDeleted($entry);
+});
+
+it('restores a soft deleted entry', function (): void {
+    $this->actingAs($this->user);
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+    $entry->delete();
+
+    $response = $this->postJson(route('entries.restore', $entry));
+
+    $response->assertOk();
+    $response->assertJson(['data' => ['id' => $entry->id, 'deleted_at' => null]]);
+    $this->assertNotSoftDeleted($entry);
+});
+
+it('permanently deletes an entry that is already deleted', function (): void {
+    $this->actingAs($this->user);
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+    $entry->delete();
+
+    $response = $this->deleteJson(route('entries.force-destroy', $entry));
+
+    $response->assertNoContent();
+    $this->assertModelMissing($entry);
+});
+
+it('refuses to permanently delete an entry that is not deleted', function (): void {
+    $this->actingAs($this->user);
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+
+    $response = $this->deleteJson(route('entries.force-destroy', $entry));
+
+    $response->assertConflict();
+    $response->assertJson(['message' => 'Only deleted entries can be permanently deleted.']);
+    $this->assertNotSoftDeleted($entry);
+});
+
+it('forbids deleting, restoring or permanently deleting an entry on a form the user does not own', function (string $method, string $routeName, bool $trashed): void {
+    $this->actingAs(User::factory()->create());
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+
+    if ($trashed) {
+        $entry->delete();
+    }
+
+    $response = $this->json($method, route($routeName, $entry));
+
+    $response->assertForbidden();
+    $response->assertJson(['message' => 'You do not own this form.']);
+    expect(FormEntry::withTrashed()->find($entry->id)?->trashed())->toBe($trashed);
+})->with([
+    'delete' => ['DELETE', 'entries.destroy', false],
+    'restore' => ['POST', 'entries.restore', true],
+    'force delete' => ['DELETE', 'entries.force-destroy', true],
+]);
+
+it('forbids access to entries of a deleted form', function (): void {
+    $this->actingAs($this->user);
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+    $this->form->delete();
+
+    $response = $this->getJson(route('entries.show', $entry));
+
+    $response->assertForbidden();
+});
+
+it('lists deleted entries with the trashed filter', function (string $value, array $expectedKeys): void {
+    $this->actingAs($this->user);
+
+    $this->travelTo('2026-01-01');
+    $entries['kept'] = FormEntry::factory()->create(['form_id' => $this->form->id]);
+    $this->travelTo('2026-01-02');
+    $entries['deleted'] = FormEntry::factory()->create(['form_id' => $this->form->id]);
+    $entries['deleted']->delete();
+
+    $response = $this->getJson(route('forms.entries.index', [$this->form, 'filter' => ['trashed' => $value]]));
+
+    $response->assertOk();
+
+    expect($response->json('data.*.id'))
+        ->toBe(array_map(fn (string $key): string => $entries[$key]->id, $expectedKeys));
+})->with([
+    'with' => ['with', ['kept', 'deleted']],
+    'only' => ['only', ['deleted']],
+]);
+
+it('applies a bulk triage action to the selected entries', function (string $action, array $before, string $attribute, mixed $expected): void {
+    $this->actingAs($this->user);
+    $this->travelTo('2026-01-01 00:00:00');
+
+    $selected = FormEntry::factory()->count(2)->create(['form_id' => $this->form->id, ...$before]);
+    $untouched = FormEntry::factory()->create(['form_id' => $this->form->id, ...$before]);
+    $untouchedValue = $untouched->fresh()->{$attribute};
+
+    $response = $this->postJson(route('forms.entries.bulk', $this->form), [
+        'action' => $action,
+        'ids' => $selected->modelKeys(),
+    ]);
+
+    $response->assertOk();
+    $response->assertExactJson(['data' => ['action' => $action, 'affected' => 2]]);
+    $selected->each(fn (FormEntry $entry) => expect($entry->fresh()->{$attribute})->toBe($expected));
+    expect($untouched->fresh()->{$attribute})->toBe($untouchedValue);
+})->with([
+    'mark_read' => ['mark_read', ['read_at' => null], 'read_at', 1767225600],
+    'mark_unread' => ['mark_unread', ['read_at' => '2026-01-01 00:00:00'], 'read_at', null],
+    'star' => ['star', ['starred' => false], 'starred', true],
+    'unstar' => ['unstar', ['starred' => true], 'starred', false],
+    'mark_spam' => ['mark_spam', ['spam' => null], 'spam', true],
+    'mark_not_spam' => ['mark_not_spam', ['spam' => true], 'spam', false],
+]);
+
+it('keeps existing read times and counts only changed entries when bulk marking read', function (): void {
+    $this->actingAs($this->user);
+
+    $alreadyRead = FormEntry::factory()->create(['form_id' => $this->form->id, 'read_at' => '2025-06-01 00:00:00']);
+    $unread = FormEntry::factory()->create(['form_id' => $this->form->id, 'read_at' => null]);
+
+    $response = $this->postJson(route('forms.entries.bulk', $this->form), [
+        'action' => 'mark_read',
+        'ids' => [$alreadyRead->id, $unread->id],
+    ]);
+
+    $response->assertOk();
+    $response->assertJsonPath('data.affected', 1);
+    expect($alreadyRead->fresh()->read_at)->toBe(Carbon::parse('2025-06-01 00:00:00')->timestamp);
+    expect($unread->fresh()->read_at)->not->toBeNull();
+});
+
+it('bulk deletes, restores and permanently deletes entries', function (): void {
+    $this->actingAs($this->user);
+
+    $entries = FormEntry::factory()->count(2)->create(['form_id' => $this->form->id]);
+    $ids = $entries->modelKeys();
+
+    $this->postJson(route('forms.entries.bulk', $this->form), ['action' => 'delete', 'ids' => $ids])
+        ->assertJsonPath('data.affected', 2);
+    $entries->each(fn (FormEntry $entry) => $this->assertSoftDeleted($entry));
+
+    $this->postJson(route('forms.entries.bulk', $this->form), ['action' => 'restore', 'ids' => $ids])
+        ->assertJsonPath('data.affected', 2);
+    $entries->each(fn (FormEntry $entry) => $this->assertNotSoftDeleted($entry));
+
+    $entries->each(fn (FormEntry $entry) => $entry->delete());
+
+    $this->postJson(route('forms.entries.bulk', $this->form), ['action' => 'force_delete', 'ids' => $ids])
+        ->assertJsonPath('data.affected', 2);
+    $entries->each(fn (FormEntry $entry) => $this->assertModelMissing($entry));
+});
+
+it('rejects a bulk request with entries that are not eligible', function (string $action, FormEntry $entry, string $errorKey): void {
+    $this->actingAs($this->user);
+
+    $response = $this->postJson(route('forms.entries.bulk', $this->form), [
+        'action' => $action,
+        'ids' => [$entry->id],
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors($errorKey);
+    $this->assertModelExists($entry);
+})->with([
+    'entry from another form' => ['delete', fn () => FormEntry::factory()->create(), 'ids.0'],
+    'deleted entry for a triage action' => ['star', fn () => tap(FormEntry::factory()->create(['form_id' => $this->form->id]))->delete(), 'ids.0'],
+    'live entry for force delete' => ['force_delete', fn () => FormEntry::factory()->create(['form_id' => $this->form->id]), 'ids.0'],
+    'unknown action' => ['archive', fn () => FormEntry::factory()->create(['form_id' => $this->form->id]), 'action'],
+]);
+
+it('rejects a bulk request with too many or no entries', function (int $count): void {
+    $this->actingAs($this->user);
+
+    $response = $this->postJson(route('forms.entries.bulk', $this->form), [
+        'action' => 'star',
+        'ids' => collect()->times($count, fn (): string => (string) Str::ulid())->all(),
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors('ids');
+})->with([
+    'none' => [0],
+    'over the limit' => [101],
+]);
+
+it('forbids bulk actions on a form the user does not own', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+
+    $response = $this->postJson(route('forms.entries.bulk', $this->form), [
+        'action' => 'delete',
+        'ids' => [$entry->id],
+    ]);
+
+    $response->assertForbidden();
+    $this->assertNotSoftDeleted($entry);
+});
+
+it('exports entries as CSV with a column per schema field', function (): void {
+    $this->actingAs($this->user);
+    $form = Form::factory()->withBasicSchema()->create(['user_id' => $this->user->id, 'name' => 'Contact Us']);
+    [$nameField, $emailField, $messageField] = array_keys($form->schema);
+
+    $this->travelTo('2026-01-02 03:04:05');
+    $entry = FormEntry::factory()->create([
+        'form_id' => $form->id,
+        'input' => [$nameField => 'Ada Lovelace', $emailField => 'ada@example.com', $messageField => "Hello,\n\"world\""],
+        'read_at' => null,
+        'starred' => true,
+        'spam' => false,
+        'spam_score' => 0.25,
+        'spam_reason' => null,
+        'ip' => '127.0.0.1',
+        'referer' => 'https://example.com/contact',
+        'user_agent' => 'Mozilla/5.0',
+    ]);
+
+    $response = $this->get(route('forms.entries.export', $form));
+
+    $response->assertOk();
+    $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+    $response->assertDownload('contact-us-entries-2026-01-02.csv');
+
+    $rows = parseCsv($response->streamedContent());
+
+    expect($rows[0])->toBe(['id', 'created_at', 'Name', 'Email', 'Message', 'read_at', 'starred', 'spam', 'spam_score', 'spam_reason', 'ip', 'referer', 'user_agent', 'deleted_at'])
+        ->and($rows[1])->toBe([$entry->id, '2026-01-02T03:04:05Z', 'Ada Lovelace', 'ada@example.com', "Hello,\n\"world\"", '', 'true', 'false', '0.25', '', '127.0.0.1', 'https://example.com/contact', 'Mozilla/5.0', ''])
+        ->and($rows)->toHaveCount(2);
+});
+
+it('applies index filters and sort to the export', function (): void {
+    $this->actingAs($this->user);
+
+    $this->travelTo('2026-01-01');
+    $older = FormEntry::factory()->create(['form_id' => $this->form->id, 'starred' => true]);
+    $this->travelTo('2026-01-02');
+    $newer = FormEntry::factory()->create(['form_id' => $this->form->id, 'starred' => true]);
+    FormEntry::factory()->create(['form_id' => $this->form->id, 'starred' => false]);
+
+    $response = $this->get(route('forms.entries.export', [$this->form, 'sort' => '-created_at', 'filter' => ['starred' => 'true']]));
+
+    $response->assertOk();
+
+    $ids = array_column(array_slice(parseCsv($response->streamedContent()), 1), 0);
+
+    expect($ids)->toBe([$newer->id, $older->id]);
+});
+
+it('escapes spreadsheet formulas in exported values', function (): void {
+    $this->actingAs($this->user);
+    $form = Form::factory()->withBasicSchema()->create(['user_id' => $this->user->id]);
+    [$nameField] = array_keys($form->schema);
+
+    FormEntry::factory()->create([
+        'form_id' => $form->id,
+        'input' => [$nameField => '=HYPERLINK("https://evil.example","click")'],
+        'user_agent' => '@SUM(1+1)',
+    ]);
+
+    $response = $this->get(route('forms.entries.export', $form));
+
+    $row = parseCsv($response->streamedContent())[1];
+
+    expect($row[2])->toBe('\'=HYPERLINK("https://evil.example","click")')
+        ->and($row[12])->toBe("'@SUM(1+1)");
+});
+
+it('forbids exporting entries of a form the user does not own', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    $response = $this->get(route('forms.entries.export', $this->form));
+
+    $response->assertForbidden();
+});

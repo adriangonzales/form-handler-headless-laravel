@@ -52,11 +52,11 @@ Table `form_entries`:
 **FR-2 List entries.** `GET /api/v1/forms/{form}/entries` returns that form's entries, paginated (15 per page), with `links` and `meta`. The sort and filters are kept in pagination links.
 
 - **Sorting:** the optional `sort` parameter accepts `created_at` (the default, oldest first) or `spam_score`. Prefix it with `-` for descending order, e.g. `sort=-created_at` for newest first. Ties are broken by ID in the same direction. Any other value, including combined sorts, returns 422 on `sort`.
-- **Filtering:** `filter[read]`, `filter[starred]` and `filter[spam]` accept `true`/`false` (`1`/`0` also work). `filter[read]=false` returns unread entries. `filter[spam]=false` includes entries whose spam check has not run (`spam` is `null`). `filter[created_from]` and `filter[created_to]` take `YYYY-MM-DD` dates and are inclusive whole days in UTC; `created_to` must not be before `created_from`. Invalid values return 422 on the filter's key, and unknown filter keys return 422 on `filter`. Filters combine with each other and with sorting.
+- **Filtering:** `filter[read]`, `filter[starred]` and `filter[spam]` accept `true`/`false` (`1`/`0` also work). `filter[read]=false` returns unread entries. `filter[spam]=false` includes entries whose spam check has not run (`spam` is `null`). `filter[created_from]` and `filter[created_to]` take `YYYY-MM-DD` dates and are inclusive whole days in UTC; `created_to` must not be before `created_from`. Deleted entries are excluded unless `filter[trashed]` is `with` (include them) or `only` (list only them). Invalid values return 422 on the filter's key, and unknown filter keys return 422 on `filter`. Filters combine with each other and with sorting.
 
 **FR-3 Show an entry.** `GET /api/v1/entries/{entry}` (shallow route).
 
-List, show and update are restricted to the owner of the entry's form; anyone else receives `403 {"message":"You do not own this form."}`.
+Every endpoint below except submission is restricted to the owner of the entry's form; anyone else receives `403 {"message":"You do not own this form."}`. Entries of a deleted form are inaccessible (403) until the form is restored.
 
 **FR-4 Update an entry.** `PUT/PATCH /api/v1/entries/{entry}` accepts:
 
@@ -70,15 +70,34 @@ List, show and update are restricted to the owner of the entry's form; anyone el
 
 Returns the refreshed entry. This is the mechanism for starring, marking read/unread, and flagging spam.
 
-**FR-5 Response shape.** Entries are returned as `{ "data": { id, form_id, input, ip, ip_location_display, referer, user_agent, user_agent_display, spam, spam_score, spam_reason, starred, read_at, created_at, updated_at, deleted_at } }`, wrapped in `data` like forms and notifications. The submitted values are under `data.input`. `spam_score` is serialised as a string with 2 decimals; `read_at` as a Unix timestamp integer. `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` for any record the API can return.
+**FR-5 Response shape.** Entries are returned as `{ "data": { id, form_id, input, ip, ip_location_display, referer, user_agent, user_agent_display, spam, spam_score, spam_reason, starred, read_at, created_at, updated_at, deleted_at } }`, wrapped in `data` like forms and notifications. The submitted values are under `data.input`. `spam_score` is serialised as a string with 2 decimals; `read_at` as a Unix timestamp integer. `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` unless the entry was listed or exported with `filter[trashed]`.
+
+**FR-6 Delete, restore and permanently delete an entry.**
+
+- `DELETE /api/v1/entries/{entry}` soft-deletes the entry and returns `204`. A deleted entry returns 404 from show and update.
+- `POST /api/v1/entries/{entry}/restore` clears `deleted_at` and returns `200` with the entry resource.
+- `DELETE /api/v1/entries/{entry}/force` permanently removes an entry and returns `204`. Only entries that are already deleted can be permanently deleted; anything else returns `409 {"message":"Only deleted entries can be permanently deleted."}`. Unlike forms, entries hold submitters' personal data, so erasure is supported.
+
+**FR-7 Bulk actions.** `POST /api/v1/forms/{form}/entries/bulk` with `{ "action": "...", "ids": ["..."] }` applies one action to up to 100 entries of the form and returns `{ "data": { "action": "...", "affected": n } }`.
+
+- `mark_read`, `mark_unread`, `star`, `unstar`, `mark_spam`, `mark_not_spam` and `delete` apply to entries that are not deleted. `restore` and `force_delete` apply to deleted entries.
+- Every ID must belong to the form and be in the right deleted state for the action; otherwise the request returns 422 on `ids.N` and nothing changes. An unknown action returns 422 on `action`; an empty list or more than 100 IDs returns 422 on `ids`.
+- Triage actions skip entries already in the target state, so `affected` counts entries that changed and `mark_read` keeps existing read times. `mark_not_spam` also sets `spam` to `false` on entries whose spam check has not run.
+
+**FR-8 Export entries.** `GET /api/v1/forms/{form}/entries/export` streams a CSV download named `{form-name-slug}-entries-{YYYY-MM-DD}.csv`. It accepts the same `filter[...]` and `sort` parameters as the list (without pagination) and the same 422 rules.
+
+- Columns: `id`, `created_at`, one column per schema field headed by its label (falling back to the field's name), then `read_at`, `starred`, `spam`, `spam_score`, `spam_reason`, `ip`, `referer`, `user_agent`, `deleted_at`.
+- Dates are ISO 8601 UTC (`2026-01-02T03:04:05Z`); booleans are `true`/`false`; missing values are empty. List values (e.g. checkboxes) are joined with `, `; other structured values are JSON.
+- Cells starting with `=`, `+`, `-`, `@`, tab or carriage return are prefixed with `'` so spreadsheet applications do not evaluate submitter input as formulas.
 
 ## 6. Gaps
 
 - **No public submission endpoint.** The store route is behind `auth:api`, so a browser form cannot post to it without exposing an account's JWT. The controller has a TODO to split out an inbound, public-facing endpoint. This is the most significant gap for a "headless form handler".
 - **No spam protection** (captcha, honeypot, rate limiting on submissions). Placeholders only.
 - **No IP geolocation or user-agent parsing** for the `*_display` fields.
-- **No delete, bulk actions, or export.**
-- Pending tests (`todo`): form/entry ID match, starring, marking read, marking unread, soft delete, restore and hard delete. The last three have no endpoints yet.
+- **Export follows the current schema.** Values stored under fields that have since been removed or renamed in the schema are not exported.
+- **Export is synchronous.** It streams from a database cursor, so memory stays flat, but a very large form holds the request open for the whole export.
+- Pending tests (`todo`): form/entry ID match, starring, marking read, marking unread.
 
 ## 7. Known issues
 
