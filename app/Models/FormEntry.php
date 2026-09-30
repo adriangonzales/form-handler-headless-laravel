@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property array<string, mixed>|null $input
+ * @property array{platform: string|null, browser: string|null, browser_version: string|null}|null $user_agent_display
  * @property CarbonImmutable|null $read_at
  */
 #[Fillable([
@@ -46,6 +47,7 @@ class FormEntry extends Model
     {
         return [
             'input' => 'array',
+            'user_agent_display' => 'array',
             'spam' => 'boolean',
             'spam_score' => 'decimal:3',
             'starred' => 'boolean',

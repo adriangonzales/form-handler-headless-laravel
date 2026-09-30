@@ -1,6 +1,7 @@
 <?php
 
 use App\Events\FormEntryCreated;
+use App\Jobs\DeliverFormEntryAlert;
 use App\Models\Form;
 use App\Models\FormNotification;
 use Illuminate\Support\Facades\Event;
@@ -84,7 +85,7 @@ it('stores a submission that fills in the honeypot as spam without alerting', fu
     expect($entry->spam)->toBeTrue();
     expect($entry->spam_reason)->toBe('Honeypot field was filled in.');
     expect($entry->input)->not->toHaveKey('website');
-    Queue::assertNothingPushed();
+    Queue::assertNotPushed(DeliverFormEntryAlert::class);
 });
 
 it('accepts a submission as not spam when the honeypot is empty or disabled', function (array $settings, array $extraInput): void {

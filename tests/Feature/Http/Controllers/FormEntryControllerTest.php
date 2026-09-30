@@ -541,7 +541,7 @@ it('rejects changes to submission fields on update', function (string $field, mi
     'ip_location_display' => ['ip_location_display', 'Elsewhere'],
     'referer' => ['referer', 'https://edited.example'],
     'user_agent' => ['user_agent', 'Edited'],
-    'user_agent_display' => ['user_agent_display', 'Edited'],
+    'user_agent_display' => ['user_agent_display', ['platform' => 'Edited', 'browser' => null, 'browser_version' => null]],
 ]);
 
 it('forbids updating an entry on a form the user does not own', function (): void {

@@ -42,7 +42,7 @@ User (account holder)
 | Public (unauthenticated) submissions                               | Built. Restricted by `settings.domains` via `Referer`, rate limited, optional honeypot; no CAPTCHA                             |
 | Ownership authorization                                            | Enforced on every form endpoint (list, show, update, delete, restore, duplicate). **Not enforced** on entries or notifications |
 | Notifications on new entry                                         | **Not built.** Recipients can be stored; nothing is sent                                                                       |
-| Spam detection, IP geolocation, UA parsing                         | **Not built.** Columns exist, placeholders only                                                                                |
+| Spam detection, IP geolocation, UA parsing                         | UA parsing built. Honeypot only for spam; no IP geolocation                                                                    |
 | Delete / restore / duplicate via API                               | Built for forms. Not built for entries or notifications                                                                        |
 | Authentication                                                     | Built: JWT login, refresh, logout, current user                                                                                |
 | Account management (registration, password reset, profile)         | **Not built.** Accounts are created by an operator                                                                             |

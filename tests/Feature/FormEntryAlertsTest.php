@@ -49,7 +49,7 @@ it('does not alert for entries flagged as spam', function (): void {
 
     event(new FormEntryCreated($entry));
 
-    Queue::assertNothingPushed();
+    Queue::assertNotPushed(DeliverFormEntryAlert::class);
 });
 
 it('emails the submitted values to the recipient', function (): void {

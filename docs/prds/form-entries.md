@@ -30,7 +30,7 @@ Table `form_entries`:
 | `ip_location_display`                    | string, nullable       | Reserved; not populated                       |
 | `referer`                                | string, nullable       | `Referer` header, truncated to 255 characters |
 | `user_agent`                             | string, nullable       | Raw UA string                                 |
-| `user_agent_display`                     | string, nullable       | Reserved; not populated                       |
+| `user_agent_display`                     | JSON, nullable         | Parsed user agent (see FR-1)                  |
 | `spam`                                   | boolean, nullable      | Model default `false`                         |
 | `spam_score`                             | decimal(4,3)           | Default `0`                                   |
 | `spam_reason`                            | string, nullable       |                                               |
@@ -46,7 +46,7 @@ Table `form_entries`:
 - Request fields are validated with the rules built from the form's schema (see [Forms FR-5](forms.md)). Failures return 422 with per-field errors.
 - Only validated fields are stored in `input`; unknown fields are silently dropped. A form with an empty schema stores `input: []`.
 - Metadata captured: `ip`, `referer`, `user_agent`. `spam` is set to `false` and `spam_score` to `0`.
-- A `FormEntryCreated` event is dispatched (no listeners are registered).
+- A `FormEntryCreated` event is dispatched. Its listeners send alerts ([Form Notifications](form-notifications.md)) and parse the user agent: `ParseFormEntryUserAgent` uses `donatj/phpuseragentparser` to store `user_agent_display` as `{ "platform": ..., "browser": ..., "browser_version": ... }` (e.g. `Macintosh`, `Chrome`, `129.0.0.0`). Parts the parser cannot identify are `null`; an entry without a user agent keeps `user_agent_display: null`. The listener is queued, so the submission response usually has `user_agent_display: null`; it is filled in once a queue worker runs the listener, and skipped if the entry has been permanently deleted by then.
 - Responds `201` with the entry resource.
 
 The entry is created by the `App\Actions\FormEntries\CreateFormEntry` action, shared with FR-1a.
@@ -85,7 +85,7 @@ Every field is optional, so a PATCH can change a single field (e.g. just `read_a
 
 Returns the refreshed entry. This is the mechanism for starring, marking read/unread, and flagging spam.
 
-**FR-5 Response shape.** Entries are returned as `{ "data": { id, form_id, input, ip, ip_location_display, referer, user_agent, user_agent_display, spam, spam_score, spam_reason, starred, read_at, created_at, updated_at, deleted_at } }`, wrapped in `data` like forms and notifications. The submitted values are under `data.input`. `spam_score` is serialised as a string with 3 decimals, matching the column (e.g. `"0.125"`). `read_at`, `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` unless the entry was listed or exported with `filter[trashed]`.
+**FR-5 Response shape.** Entries are returned as `{ "data": { id, form_id, input, ip, ip_location_display, referer, user_agent, user_agent_display, spam, spam_score, spam_reason, starred, read_at, created_at, updated_at, deleted_at } }`, wrapped in `data` like forms and notifications. The submitted values are under `data.input`. `user_agent_display` is an object (see FR-1) or `null`. `spam_score` is serialised as a string with 3 decimals, matching the column (e.g. `"0.125"`). `read_at`, `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` unless the entry was listed or exported with `filter[trashed]`.
 
 **FR-6 Delete, restore and permanently delete an entry.**
 
@@ -113,7 +113,7 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 ## 6. Gaps
 
 - **Limited spam protection.** FR-1a has rate limiting and an optional honeypot; there is no CAPTCHA. This matters more now that FR-1a is public. The `Referer` check in FR-1a stops casual cross-site posting from browsers, but non-browser clients can set any `Referer`.
-- **No IP geolocation or user-agent parsing** for the `*_display` fields.
+- **No IP geolocation** for `ip_location_display`.
 
 ## 7. Known issues
 

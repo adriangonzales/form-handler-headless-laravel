@@ -25,7 +25,11 @@ class FormEntryFactory extends Factory
             'ip_location_display' => fake()->word(),
             'referer' => fake()->word(),
             'user_agent' => fake()->word(),
-            'user_agent_display' => fake()->word(),
+            'user_agent_display' => [
+                'platform' => fake()->randomElement(['Windows', 'Macintosh', 'Linux', 'iPhone', 'Android']),
+                'browser' => fake()->randomElement(['Chrome', 'Firefox', 'Safari', 'Edge']),
+                'browser_version' => fake()->numerify('###.0'),
+            ],
             'spam' => fake()->boolean(),
             'spam_score' => fake()->randomFloat(2, 0, 1),
             'spam_reason' => fake()->word(),

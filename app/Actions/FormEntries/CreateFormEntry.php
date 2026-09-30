@@ -27,7 +27,6 @@ class CreateFormEntry
             // 'ip_location_display' => null, // TODO: Add parse step
             'referer' => Str::substr((string) $request->header('Referer'), 0, 255) ?: null,
             'user_agent' => $request->userAgent(),
-            // 'user_agent_display', // TODO: Add parse step
             'spam' => $spamReason !== null, // TODO: Add catpcha service step
             'spam_score' => 0, // TODO: Add catpcha service step
             'spam_reason' => $spamReason,
