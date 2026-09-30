@@ -16,6 +16,7 @@ use App\Models\FormEntry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 
 class FormEntryController extends Controller
 {
@@ -51,7 +52,7 @@ class FormEntryController extends Controller
             'input' => $request->validated(),
             'ip' => implode(',', $request->ips()),
             // 'ip_location_display' => null, // TODO: Add parse step
-            'referer' => $request->header('HTTP_REFERER'),
+            'referer' => Str::substr((string) $request->header('Referer'), 0, 255) ?: null,
             'user_agent' => $request->userAgent(),
             // 'user_agent_display', // TODO: Add parse step
             'spam' => false, // TODO: Add catpcha service step

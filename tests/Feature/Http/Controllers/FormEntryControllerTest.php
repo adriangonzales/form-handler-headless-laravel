@@ -149,6 +149,22 @@ it('creates a new form entry', function (): void {
     });
 });
 
+it('records the referer of a submission', function (?string $referer, ?string $expected): void {
+    $this->actingAs($this->user);
+    $this->form->update(['active' => true]);
+
+    $response = $this->withHeaders(array_filter(['Referer' => $referer]))
+        ->postJson(route('forms.entries.store', $this->form));
+
+    $response->assertCreated();
+    $response->assertJsonPath('data.referer', $expected);
+    expect($this->form->entries()->sole()->referer)->toBe($expected);
+})->with([
+    'present' => ['https://example.com/contact?utm_source=newsletter', 'https://example.com/contact?utm_source=newsletter'],
+    'longer than the column' => ['https://example.com/'.str_repeat('a', 300), 'https://example.com/'.str_repeat('a', 235)],
+    'absent' => [null, null],
+]);
+
 it('stores only validated schema fields as input', function (): void {
     $this->actingAs($this->user);
     $form = Form::factory()->active()->withBasicSchema()->create(['user_id' => $this->user->id]);

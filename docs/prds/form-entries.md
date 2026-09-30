@@ -28,7 +28,7 @@ Table `form_entries`:
 | `input`                                  | JSON, nullable         | Validated submission values                   |
 | `ip`                                     | string, nullable       | All client IPs from the request, comma-joined |
 | `ip_location_display`                    | string, nullable       | Reserved; not populated                       |
-| `referer`                                | string, nullable       | See Known issues                              |
+| `referer`                                | string, nullable       | `Referer` header, truncated to 255 characters |
 | `user_agent`                             | string, nullable       | Raw UA string                                 |
 | `user_agent_display`                     | string, nullable       | Reserved; not populated                       |
 | `spam`                                   | boolean, nullable      | Model default `false`                         |
@@ -104,7 +104,6 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 
 ## 7. Known issues
 
-- **Referer is never captured.** The controller reads `$request->header('HTTP_REFERER')`; the header name is `Referer`, so the value is always `null`.
 - **Update allows rewriting submission metadata.** `input`, `ip`, `user_agent` and `referer` are editable, which undermines the audit trail.
 - **`input` validated as a JSON string on update** while the model casts it to an array, so updating `input` with a JSON object fails validation.
 - **Full-replacement semantics.** `spam_score` and `starred` are required on every update, so a client cannot PATCH just `read_at`.
