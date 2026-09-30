@@ -49,9 +49,11 @@ Table `form_entries`:
 - A `FormEntryCreated` event is dispatched (no listeners are registered).
 - Responds `201` with the entry resource.
 
-**FR-2 List entries.** `GET /api/v1/forms/{form}/entries` returns entries oldest first, paginated (15 per page), with `links` and `meta`. The `{form}` parameter only has to exist: entries from **every** form are returned (see Gaps).
+**FR-2 List entries.** `GET /api/v1/forms/{form}/entries` returns that form's entries oldest first, paginated (15 per page), with `links` and `meta`.
 
 **FR-3 Show an entry.** `GET /api/v1/entries/{entry}` (shallow route).
+
+List, show and update are restricted to the owner of the entry's form; anyone else receives `403 {"message":"You do not own this form."}`.
 
 **FR-4 Update an entry.** `PUT/PATCH /api/v1/entries/{entry}` accepts:
 
@@ -70,8 +72,6 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 ## 6. Gaps
 
 - **No public submission endpoint.** The store route is behind `auth:api`, so a browser form cannot post to it without exposing an account's JWT. The controller has a TODO to split out an inbound, public-facing endpoint. This is the most significant gap for a "headless form handler".
-- **Entries are not scoped to their form.** The index endpoint ignores `{form}` and returns entries from _every_ form in the system.
-- **No ownership checks** on list, show, or update — any authenticated user can read or edit any entry.
 - **No spam protection** (captcha, honeypot, rate limiting on submissions). Placeholders only.
 - **No IP geolocation or user-agent parsing** for the `*_display` fields.
 - **No filtering or sorting** (unread, starred, spam, date range) and no newest-first option.

@@ -449,6 +449,7 @@ it('sorts the form index by updated_at', function (string $sort, array $expected
     $response = $this->getJson(route('forms.index', ['sort' => $sort]));
 
     $response->assertOk();
+
     expect($response->json('data.*.id'))
         ->toBe(array_map(fn (int $index): string => $forms[$index]->id, $expectedOrder));
 })->with([
@@ -467,6 +468,7 @@ it('sorts the form index by name case-insensitively', function (string $sort, ar
     $response = $this->getJson(route('forms.index', ['sort' => $sort]));
 
     $response->assertOk();
+
     expect($response->json('data.*.name'))->toBe($expectedNames);
 })->with([
     'ascending' => ['name', ['apple', 'banana', 'Cherry']],
@@ -483,6 +485,7 @@ it('filters the form index by active', function (string $value, bool $expectedAc
     $response = $this->getJson(route('forms.index', ['filter' => ['active' => $value]]));
 
     $response->assertOk();
+
     expect($response->json('data.*.id'))->toBe([($expectedActive ? $active : $inactive)->id]);
 })->with([
     'true' => ['true', true],
@@ -502,6 +505,7 @@ it('combines the active filter with sorting', function (): void {
     $response = $this->getJson(route('forms.index', ['sort' => 'name', 'filter' => ['active' => 'true']]));
 
     $response->assertOk();
+
     expect($response->json('data.*.name'))->toBe(['Alpha', 'Beta']);
 });
 
@@ -514,6 +518,7 @@ it('keeps the filter in pagination links', function (): void {
     $response = $this->getJson(route('forms.index', ['filter' => ['active' => 'true']]));
 
     $response->assertOk();
+
     expect(urldecode($response->json('links.next')))->toContain('filter[active]=true');
 });
 

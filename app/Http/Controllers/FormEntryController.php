@@ -9,12 +9,15 @@ use App\Http\Resources\FormEntryCollection;
 use App\Http\Resources\FormEntryResource;
 use App\Models\Form;
 use App\Models\FormEntry;
+use Illuminate\Support\Facades\Gate;
 
 class FormEntryController extends Controller
 {
-    public function index(): FormEntryCollection
+    public function index(Form $form): FormEntryCollection
     {
-        $formEntries = FormEntry::query()->oldest()
+        Gate::authorize('view', $form);
+
+        $formEntries = $form->entries()->oldest()
             ->paginate();
 
         return new FormEntryCollection($formEntries);
@@ -22,6 +25,8 @@ class FormEntryController extends Controller
 
     public function show(FormEntry $entry): FormEntryResource
     {
+        Gate::authorize('view', $entry);
+
         return new FormEntryResource($entry);
     }
 

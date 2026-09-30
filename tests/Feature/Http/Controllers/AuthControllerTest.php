@@ -149,6 +149,7 @@ it('refreshes a token and invalidates the old one', function (): void {
     $response = $this->withToken($token)->postJson(route('auth.refresh'));
 
     $response->assertOk();
+
     $newToken = $response->json('access_token');
     expect($newToken)->toBeString()->not->toBe($token);
     freshAuthState();

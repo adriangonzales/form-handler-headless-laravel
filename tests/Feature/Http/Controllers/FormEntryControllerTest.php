@@ -61,6 +61,19 @@ it('lists results from the index', function (): void {
     $response->assertJsonCount(1, 'data');
 });
 
+it('only lists entries belonging to the requested form', function (): void {
+    $this->actingAs($this->user);
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+    FormEntry::factory()->create();
+
+    $response = $this->getJson(route('forms.entries.index', $this->form));
+
+    $response->assertOk();
+    $response->assertJsonCount(1, 'data');
+    $response->assertJsonPath('data.0.id', $entry->id);
+});
+
 it('shows single form entry', function (): void {
     $this->actingAs($this->user);
 
@@ -155,6 +168,7 @@ it('stores only validated schema fields as input', function (): void {
     $response->assertCreated();
     $response->assertJsonPath('data.input', $expectedInput);
     $response->assertJsonMissingPath('data.input.unexpected');
+
     expect($form->entries()->sole()->input)->toBe($expectedInput);
 });
 
@@ -188,6 +202,58 @@ it('includes timestamps in the form entry resource', function (): void {
             'deleted_at' => null,
         ],
     ]);
+});
+
+it('forbids listing entries for a form the user does not own', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    FormEntry::factory()->create(['form_id' => $this->form->id]);
+
+    $response = $this->getJson(route('forms.entries.index', $this->form));
+
+    $response->assertForbidden();
+    $response->assertJson(['message' => 'You do not own this form.']);
+});
+
+it('forbids showing an entry on a form the user does not own', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+
+    $response = $this->getJson(route('entries.show', $entry));
+
+    $response->assertForbidden();
+    $response->assertJson(['message' => 'You do not own this form.']);
+});
+
+it('updates an entry on a form the user owns', function (): void {
+    $this->actingAs($this->user);
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'starred' => false]);
+
+    $response = $this->putJson(route('entries.update', $entry), [
+        'spam_score' => 0,
+        'starred' => true,
+    ]);
+
+    $response->assertOk();
+    $response->assertJsonPath('data.starred', true);
+});
+
+it('forbids updating an entry on a form the user does not own', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'starred' => false]);
+
+    $response = $this->putJson(route('entries.update', $entry), [
+        'spam_score' => 0,
+        'starred' => true,
+    ]);
+
+    $response->assertForbidden();
+    $response->assertJson(['message' => 'You do not own this form.']);
+
+    expect($entry->fresh()->starred)->toBeFalse();
 });
 
 todo('Test that form and entry IDs match');
