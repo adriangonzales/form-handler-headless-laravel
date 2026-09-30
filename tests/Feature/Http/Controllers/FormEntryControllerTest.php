@@ -3,10 +3,10 @@
 namespace Tests\Feature\Http\Controllers;
 
 use App\Events\FormEntryCreated;
+use App\Http\Requests\FormEntryUpdateRequest;
 use App\Models\Form;
 use App\Models\FormEntry;
 use App\Models\User;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 
@@ -131,7 +131,7 @@ it('creates a new form entry', function (): void {
             'user_agent' => 'Symfony',
             'user_agent_display' => null,
             'spam' => false,
-            'spam_score' => '0.00',
+            'spam_score' => '0.000',
             'spam_reason' => null,
             'starred' => false,
             'read_at' => null,
@@ -208,13 +208,14 @@ it('includes timestamps in the form entry resource', function (): void {
     $this->actingAs($this->user);
 
     $this->travelTo('2026-01-02 03:04:05');
-    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'read_at' => '2026-01-03 04:05:06']);
 
     $response = $this->getJson(route('entries.show', $entry));
 
     $response->assertOk();
     $response->assertJson([
         'data' => [
+            'read_at' => '2026-01-03T04:05:06.000000Z',
             'created_at' => '2026-01-02T03:04:05.000000Z',
             'updated_at' => '2026-01-02T03:04:05.000000Z',
             'deleted_at' => null,
@@ -257,8 +258,8 @@ it('sorts the entry index by spam_score', function (string $sort, array $expecte
 
     expect($response->json('data.*.spam_score'))->toBe($expectedScores);
 })->with([
-    'ascending' => ['spam_score', ['0.10', '0.50', '0.90']],
-    'descending' => ['-spam_score', ['0.90', '0.50', '0.10']],
+    'ascending' => ['spam_score', ['0.100', '0.500', '0.900']],
+    'descending' => ['-spam_score', ['0.900', '0.500', '0.100']],
 ]);
 
 it('filters the entry index by read state', function (string $value, bool $expectRead): void {
@@ -429,6 +430,100 @@ it('updates an entry on a form the user owns', function (): void {
     $response->assertJsonPath('data.starred', true);
 });
 
+it('updates only the fields sent in a partial update', function (): void {
+    $this->actingAs($this->user);
+    $this->travelTo('2026-01-02 03:04:05');
+
+    $entry = FormEntry::factory()->create([
+        'form_id' => $this->form->id,
+        'starred' => true,
+        'spam_score' => 0.5,
+        'read_at' => null,
+    ]);
+
+    $response = $this->patchJson(route('entries.update', $entry), ['read_at' => now()]);
+
+    $response->assertOk();
+    expect($entry->fresh())
+        ->read_at->toEqual(now())
+        ->starred->toBeTrue()
+        ->spam_score->toBe('0.500');
+});
+
+it('rejects a read_at that is not a date', function (): void {
+    $this->actingAs($this->user);
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+
+    $response = $this->patchJson(route('entries.update', $entry), ['read_at' => 'yesterday-ish']);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors('read_at');
+});
+
+it('keeps the stored precision of the spam score', function (): void {
+    $this->actingAs($this->user);
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+
+    $response = $this->patchJson(route('entries.update', $entry), ['spam_score' => 0.125]);
+
+    $response->assertOk();
+    $response->assertJsonPath('data.spam_score', '0.125');
+    expect($entry->fresh()->spam_score)->toBe('0.125');
+});
+
+it('rejects a spam score outside the column range', function (float $score): void {
+    $this->actingAs($this->user);
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+
+    $response = $this->patchJson(route('entries.update', $entry), ['spam_score' => $score]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors('spam_score');
+})->with([
+    'negative' => [-0.1],
+    'too large' => [10],
+]);
+
+it('rejects an empty value for a sent triage field', function (string $field): void {
+    $this->actingAs($this->user);
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
+
+    $response = $this->patchJson(route('entries.update', $entry), [$field => null]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors($field);
+})->with(['spam_score', 'starred']);
+
+it('rejects changes to submission fields on update', function (string $field, mixed $value): void {
+    $this->actingAs($this->user);
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'starred' => false]);
+    $original = $entry->fresh()->only(FormEntryUpdateRequest::SUBMISSION_FIELDS);
+
+    $response = $this->putJson(route('entries.update', $entry), [
+        'spam_score' => 0,
+        'starred' => true,
+        $field => $value,
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors($field);
+    expect($entry->fresh())
+        ->only(FormEntryUpdateRequest::SUBMISSION_FIELDS)->toBe($original)
+        ->starred->toBeFalse();
+})->with([
+    'input' => ['input', ['name' => 'Edited']],
+    'ip' => ['ip', '10.0.0.1'],
+    'ip_location_display' => ['ip_location_display', 'Elsewhere'],
+    'referer' => ['referer', 'https://edited.example'],
+    'user_agent' => ['user_agent', 'Edited'],
+    'user_agent_display' => ['user_agent_display', 'Edited'],
+]);
+
 it('forbids updating an entry on a form the user does not own', function (): void {
     $this->actingAs(User::factory()->create());
 
@@ -554,7 +649,7 @@ it('applies a bulk triage action to the selected entries', function (string $act
 
     $selected = FormEntry::factory()->count(2)->create(['form_id' => $this->form->id, ...$before]);
     $untouched = FormEntry::factory()->create(['form_id' => $this->form->id, ...$before]);
-    $untouchedValue = $untouched->fresh()->{$attribute};
+    $untouchedValue = $untouched->fresh()->toArray()[$attribute];
 
     $response = $this->postJson(route('forms.entries.bulk', $this->form), [
         'action' => $action,
@@ -563,10 +658,10 @@ it('applies a bulk triage action to the selected entries', function (string $act
 
     $response->assertOk();
     $response->assertExactJson(['data' => ['action' => $action, 'affected' => 2]]);
-    $selected->each(fn (FormEntry $entry) => expect($entry->fresh()->{$attribute})->toBe($expected));
-    expect($untouched->fresh()->{$attribute})->toBe($untouchedValue);
+    $selected->each(fn (FormEntry $entry) => expect($entry->fresh()->toArray()[$attribute])->toBe($expected));
+    expect($untouched->fresh()->toArray()[$attribute])->toBe($untouchedValue);
 })->with([
-    'mark_read' => ['mark_read', ['read_at' => null], 'read_at', 1767225600],
+    'mark_read' => ['mark_read', ['read_at' => null], 'read_at', '2026-01-01T00:00:00.000000Z'],
     'mark_unread' => ['mark_unread', ['read_at' => '2026-01-01 00:00:00'], 'read_at', null],
     'star' => ['star', ['starred' => false], 'starred', true],
     'unstar' => ['unstar', ['starred' => true], 'starred', false],
@@ -587,7 +682,7 @@ it('keeps existing read times and counts only changed entries when bulk marking 
 
     $response->assertOk();
     $response->assertJsonPath('data.affected', 1);
-    expect($alreadyRead->fresh()->read_at)->toBe(Carbon::parse('2025-06-01 00:00:00')->timestamp);
+    expect($alreadyRead->fresh()->read_at->toJSON())->toBe('2025-06-01T00:00:00.000000Z');
     expect($unread->fresh()->read_at)->not->toBeNull();
 });
 

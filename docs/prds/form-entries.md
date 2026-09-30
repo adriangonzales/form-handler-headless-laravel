@@ -60,17 +60,19 @@ Every endpoint below except submission is restricted to the owner of the entry's
 
 **FR-4 Update an entry.** `PUT/PATCH /api/v1/entries/{entry}` accepts:
 
-| Field                                                                                     | Rules             |
-| ----------------------------------------------------------------------------------------- | ----------------- |
-| `spam_score`                                                                              | required, numeric |
-| `starred`                                                                                 | required          |
-| `input`                                                                                   | nullable, json    |
-| `ip`, `ip_location_display`, `referer`, `user_agent`, `user_agent_display`, `spam_reason` | nullable, string  |
-| `spam`, `read_at`                                                                         | nullable          |
+| Field         | Rules                      |
+| ------------- | -------------------------- |
+| `spam_score`  | optional, numeric, 0–9.999 |
+| `starred`     | optional                   |
+| `spam_reason` | nullable, string           |
+| `spam`        | nullable                   |
+| `read_at`     | nullable, date             |
+
+Every field is optional, so a PATCH can change a single field (e.g. just `read_at`) and leaves the rest untouched; `spam_score` and `starred` cannot be set to `null`. The submission fields (`input`, `ip`, `ip_location_display`, `referer`, `user_agent`, `user_agent_display`) are recorded at submission time and are read-only: sending any of them returns 422 on that field and nothing is changed.
 
 Returns the refreshed entry. This is the mechanism for starring, marking read/unread, and flagging spam.
 
-**FR-5 Response shape.** Entries are returned as `{ "data": { id, form_id, input, ip, ip_location_display, referer, user_agent, user_agent_display, spam, spam_score, spam_reason, starred, read_at, created_at, updated_at, deleted_at } }`, wrapped in `data` like forms and notifications. The submitted values are under `data.input`. `spam_score` is serialised as a string with 2 decimals; `read_at` as a Unix timestamp integer. `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` unless the entry was listed or exported with `filter[trashed]`.
+**FR-5 Response shape.** Entries are returned as `{ "data": { id, form_id, input, ip, ip_location_display, referer, user_agent, user_agent_display, spam, spam_score, spam_reason, starred, read_at, created_at, updated_at, deleted_at } }`, wrapped in `data` like forms and notifications. The submitted values are under `data.input`. `spam_score` is serialised as a string with 3 decimals, matching the column (e.g. `"0.125"`). `read_at`, `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` unless the entry was listed or exported with `filter[trashed]`.
 
 **FR-6 Delete, restore and permanently delete an entry.**
 
@@ -104,11 +106,6 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 
 ## 7. Known issues
 
-- **Update allows rewriting submission metadata.** `input`, `ip`, `user_agent` and `referer` are editable, which undermines the audit trail.
-- **`input` validated as a JSON string on update** while the model casts it to an array, so updating `input` with a JSON object fails validation.
-- **Full-replacement semantics.** `spam_score` and `starred` are required on every update, so a client cannot PATCH just `read_at`.
-- **Mixed date formats.** `read_at` is serialised as a Unix integer (model cast `timestamp`) while `created_at`, `updated_at` and `deleted_at` are ISO 8601 strings.
-- **Precision mismatch.** Column is `decimal(4,3)` but the model casts to `decimal:2`.
 - **Undelivered alerts.** `NewFormEntry` mail and notification calls are commented out; see [Form Notifications](form-notifications.md).
 
 ## 8. Open questions

@@ -8,7 +8,6 @@ use App\Models\Form;
 use App\Models\FormEntry;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 
 class WriteEntriesCsv
 {
@@ -64,7 +63,7 @@ class WriteEntriesCsv
                 $entry->id,
                 $this->formatDate($entry->created_at),
                 ...array_map(fn (int|string $inputKey): string => $this->formatValue($input[$inputKey] ?? null), array_keys($fields)),
-                $this->formatDate($entry->read_at === null ? null : Carbon::createFromTimestampUTC($entry->read_at)),
+                $this->formatDate($entry->read_at),
                 $this->formatValue($entry->starred),
                 $this->formatValue($entry->spam),
                 (string) $entry->spam_score,

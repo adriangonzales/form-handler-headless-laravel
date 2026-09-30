@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Database\Factories\FormEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property array<string, mixed>|null $input
+ * @property CarbonImmutable|null $read_at
  */
 #[Fillable([
     'form_id',
@@ -45,9 +47,9 @@ class FormEntry extends Model
         return [
             'input' => 'array',
             'spam' => 'boolean',
-            'spam_score' => 'decimal:2',
+            'spam_score' => 'decimal:3',
             'starred' => 'boolean',
-            'read_at' => 'timestamp',
+            'read_at' => 'datetime',
         ];
     }
 
