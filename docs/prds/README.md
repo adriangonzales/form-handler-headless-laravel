@@ -29,7 +29,7 @@ User (account holder)
 - **Stack:** Laravel 13, PHP 8.4, `tymon/jwt-auth` (API auth), `spatie/laravel-data` (settings), Pest (tests).
 - **Identifiers:** Forms, entries and notifications use ULIDs. Users use auto-increment integers.
 - **Deletion:** All three form-domain tables support soft deletes. Forms can be deleted and restored through the API; entries and notifications cannot.
-- **API base path:** `/api/v1`. Everything except `auth/login` and `auth/refresh` requires a JWT bearer token (`auth:api`).
+- **API base path:** `/api/v1`. Everything except `auth/login`, `auth/refresh`, the password reset and webhook endpoints, and public submissions (`POST forms/{form}/submissions`) requires a JWT bearer token (`auth:api`).
 - **Scaffolding source:** The domain was generated from `draft.yaml` (Laravel Blueprint) and then hand-edited; the YAML is no longer an exact match for the code.
 
 ## Cross-cutting status
@@ -39,7 +39,7 @@ User (account holder)
 | Form CRUD (list, show, create, update, delete, restore, duplicate) | Built                                                                                                                          |
 | Schema-driven submission validation                                | Built                                                                                                                          |
 | Entry list / show / update                                         | Built, not scoped to owner                                                                                                     |
-| Public (unauthenticated) submissions                               | **Not built.** Submitting requires an account's JWT                                                                            |
+| Public (unauthenticated) submissions                               | Built. Restricted by `settings.domains` via `Referer` and rate limited; no spam protection                                     |
 | Ownership authorization                                            | Enforced on every form endpoint (list, show, update, delete, restore, duplicate). **Not enforced** on entries or notifications |
 | Notifications on new entry                                         | **Not built.** Recipients can be stored; nothing is sent                                                                       |
 | Spam detection, IP geolocation, UA parsing                         | **Not built.** Columns exist, placeholders only                                                                                |

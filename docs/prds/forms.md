@@ -60,7 +60,8 @@ The factory's `withBasicSchema()` state and the tests use ULIDs as field IDs, bu
 {
     "redirect": "https://example.com/thanks",
     "timezone": "America/Chicago",
-    "domains": ["example.com", "*.example.org"]
+    "domains": ["example.com", "*.example.org"],
+    "message": "Thanks, we will be in touch."
 }
 ```
 
@@ -69,9 +70,10 @@ The factory's `withBasicSchema()` state and the tests use ULIDs as field IDs, bu
 | `redirect` | string \| null          | `null`  | URL, max 2048                                                                  | Where to send a browser after a successful submission |
 | `timezone` | string \| null          | `null`  | Valid PHP timezone identifier                                                  | Displaying entry timestamps and notification content  |
 | `domains`  | list of strings \| null | `[]`    | List of hostnames; a leading `*.` wildcard is allowed. No scheme, port or path | Origins allowed to submit to the form                 |
+| `message`  | string \| null          | `null`  | Max 2000                                                                       | Success message shown to a submitter                  |
 
 - Unknown keys are rejected with a 422 on `settings`. They are not silently dropped.
-- Omitted keys take their defaults. A form with settings always returns all three keys.
+- Omitted keys take their defaults. A form with settings always returns all four keys.
 - `settings` itself may be `null` or omitted, in which case the form has no settings and the API returns `null`.
 - Validation is shared by create and update through `App\Concerns\FormSettingsValidationRules`, which reads the allowed keys and rules from `FormSettings`. Adding a property to `FormSettings` is enough to accept and validate a new setting.
 - Planned settings (noted in `FormSettings`): CAPTCHA type (none, reCAPTCHA, hCaptcha) and secret key, honeypot enabled flag and field name.
@@ -115,7 +117,7 @@ The form is created under the authenticated user, `active` defaults to `false`, 
 
 ## 8. Gaps
 
-- **Settings are stored but not yet acted on.** `redirect`, `timezone` and `domains` are validated and returned, but no submission, notification or display logic reads them yet. `redirect` and `domains` depend on a public submission endpoint ([Form Entries](form-entries.md)). `timezone` could now be applied to alert emails, which show submission times in UTC ([Form Notifications](form-notifications.md)).
+- **`timezone` is stored but not yet acted on.** `domains` restricts public submissions by `Referer`, and `redirect` and `message` are returned to the submitter ([Form Entries](form-entries.md) FR-1a). `timezone` could now be applied to alert emails, which show submission times in UTC ([Form Notifications](form-notifications.md)).
 
 ## 9. Known issues
 
@@ -125,4 +127,3 @@ The form is created under the authenticated user, `active` defaults to `false`, 
 
 1. Should field definitions support type, placeholder, options, and ordering, or stay validation-only?
 2. Should the schema be validated structurally (and rule names checked) when a form is saved?
-3. Should a success message be added to `settings`, alongside the planned CAPTCHA and honeypot settings?

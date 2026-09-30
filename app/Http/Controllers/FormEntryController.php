@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Actions\FormEntries\ApplyBulkAction;
+use App\Actions\FormEntries\CreateFormEntry;
 use App\Actions\FormEntries\FilterEntries;
-use App\Events\FormEntryCreated;
 use App\Http\Requests\FormEntryBulkRequest;
 use App\Http\Requests\FormEntryIndexRequest;
 use App\Http\Requests\FormEntryStoreRequest;
@@ -16,7 +16,6 @@ use App\Models\FormEntry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 
 class FormEntryController extends Controller
 {
@@ -44,24 +43,9 @@ class FormEntryController extends Controller
         return new FormEntryResource($entry);
     }
 
-    // TODO: Break this out into a separate inbound API-specific function
-    public function store(FormEntryStoreRequest $request, Form $form): FormEntryResource
+    public function store(FormEntryStoreRequest $request, Form $form, CreateFormEntry $createFormEntry): FormEntryResource
     {
-        /** @var FormEntry */
-        $formEntry = $form->entries()->create([
-            'input' => $request->validated(),
-            'ip' => implode(',', $request->ips()),
-            // 'ip_location_display' => null, // TODO: Add parse step
-            'referer' => Str::substr((string) $request->header('Referer'), 0, 255) ?: null,
-            'user_agent' => $request->userAgent(),
-            // 'user_agent_display', // TODO: Add parse step
-            'spam' => false, // TODO: Add catpcha service step
-            'spam_score' => 0, // TODO: Add catpcha service step
-        ]);
-
-        event(new FormEntryCreated($formEntry));
-
-        return new FormEntryResource($formEntry);
+        return new FormEntryResource($createFormEntry($form, $request->validated(), $request));
     }
 
     public function update(FormEntryUpdateRequest $request, FormEntry $entry): FormEntryResource

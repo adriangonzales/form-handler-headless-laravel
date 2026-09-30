@@ -20,6 +20,8 @@ final class FormSettings extends Data
         #[Timezone]
         public ?string $timezone = null,
         public ?array $domains = [],
+        #[Max(2000)]
+        public ?string $message = null,
         // TODO: CAPTCHA type (none, recaptcha, hcaptcha)
         // TODO: CAPTCHA secret key
         // TODO: HoneyPot Enabled
@@ -37,5 +39,40 @@ final class FormSettings extends Data
             'domains' => ['nullable', 'array', 'list'],
             'domains.*' => ['required', 'string', 'max:253', 'regex:/^(?=.{1,253}$)(\*\.)?([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/i'],
         ];
+    }
+
+    /**
+     * Determine whether a submission with the given Referer header is allowed by the domains setting.
+     *
+     * With no domains set every submission is allowed. Otherwise the referer's host must equal a domain,
+     * or be a subdomain of a `*.` wildcard domain (which does not match the bare domain itself).
+     */
+    public function allowsReferer(?string $referer): bool
+    {
+        if ($this->domains === null || $this->domains === []) {
+            return true;
+        }
+
+        $host = parse_url((string) $referer, PHP_URL_HOST);
+
+        if (! is_string($host) || $host === '') {
+            return false;
+        }
+
+        $host = strtolower($host);
+
+        foreach ($this->domains as $domain) {
+            $domain = strtolower($domain);
+
+            if (str_starts_with($domain, '*.')) {
+                if (str_ends_with($host, substr($domain, 1))) {
+                    return true;
+                }
+            } elseif ($host === $domain) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

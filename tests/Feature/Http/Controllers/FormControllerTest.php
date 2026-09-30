@@ -119,6 +119,7 @@ it('creates a new form', function (): void {
         'redirect' => $settings['redirect'],
         'timezone' => null,
         'domains' => [],
+        'message' => null,
     ], $form->settings->toArray());
 
     Event::assertDispatched(FormCreated::class, function ($event) use ($form) {
@@ -315,6 +316,7 @@ it('stores and returns every form setting', function (): void {
         'redirect' => 'https://example.com/thanks',
         'timezone' => 'America/Chicago',
         'domains' => ['example.com', '*.example.org'],
+        'message' => 'Thanks, we will be in touch.',
     ];
 
     $response = $this->postJson(route('forms.store'), [
@@ -344,6 +346,7 @@ it('fills in defaults for omitted form settings', function (): void {
         'redirect' => null,
         'timezone' => 'UTC',
         'domains' => [],
+        'message' => null,
     ]);
 });
 
@@ -365,6 +368,7 @@ it('rejects invalid form settings', function (array $settings, string $errorKey)
     'domains is not a list' => [['domains' => ['primary' => 'example.com']], 'settings.domains'],
     'domain is not a hostname' => [['domains' => ['https://example.com/path']], 'settings.domains.0'],
     'domain is not a string' => [['domains' => [123]], 'settings.domains.0'],
+    'message is too long' => [['message' => str_repeat('a', 2001)], 'settings.message'],
 ]);
 
 it('validates settings when updating a form', function (): void {

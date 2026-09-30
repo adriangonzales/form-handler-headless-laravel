@@ -6,6 +6,7 @@ use App\Http\Controllers\FormController;
 use App\Http\Controllers\FormEntryController;
 use App\Http\Controllers\FormEntryExportController;
 use App\Http\Controllers\FormNotificationController;
+use App\Http\Controllers\FormSubmissionController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PostmarkWebhookController;
 use App\Http\Middleware\VerifyPostmarkWebhook;
@@ -33,6 +34,10 @@ Route::prefix('v1')->group(function () {
     Route::post('webhooks/postmark/bounces', PostmarkWebhookController::class)
         ->middleware(VerifyPostmarkWebhook::class)
         ->name('webhooks.postmark.bounces');
+
+    Route::post('forms/{form}/submissions', FormSubmissionController::class)
+        ->middleware(['throttle:300,1', 'throttle:form-submissions'])
+        ->name('forms.submissions.store');
 
     Route::middleware(['auth:api', 'token.current'])->group(function () {
         Route::apiResource('forms', FormController::class)->only('index', 'show', 'store', 'update', 'destroy');

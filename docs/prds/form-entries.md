@@ -1,6 +1,6 @@
 # PRD: Form Entries
 
-**Status:** Partially built · **Owner area:** `FormEntryController`, `FormEntry` model, `FormEntryStoreRequest`
+**Status:** Partially built · **Owner area:** `FormEntryController`, `FormSubmissionController`, `FormEntry` model, `FormEntryStoreRequest`, `FormSubmissionRequest`, `CreateFormEntry`
 
 ## 1. Summary
 
@@ -8,7 +8,7 @@ A Form Entry is one submission to a form. The service validates submitted fields
 
 ## 2. Users
 
-- **Submitter** — an end user filling in a form on a third-party site. Today they cannot submit directly (see Gaps); submissions must be made with an account's JWT.
+- **Submitter** — an end user filling in a form on a third-party site. They submit to the public endpoint (FR-1a) without any credentials.
 - **Account holder** — reviews and triages entries for their forms.
 
 ## 3. Goals
@@ -48,6 +48,18 @@ Table `form_entries`:
 - Metadata captured: `ip`, `referer`, `user_agent`. `spam` is set to `false` and `spam_score` to `0`.
 - A `FormEntryCreated` event is dispatched (no listeners are registered).
 - Responds `201` with the entry resource.
+
+The entry is created by the `App\Actions\FormEntries\CreateFormEntry` action, shared with FR-1a.
+
+**FR-1a Public submission.** `POST /api/v1/forms/{form}/submissions` (no authentication) is the endpoint browser forms post to.
+
+- A deleted or unknown form returns 404.
+- The form must be active, with the same 403 as FR-1.
+- If the form's `settings.domains` is non-empty, the `Referer` header's host must match one of them, or the request is rejected with `403 {"message":"Submissions are not accepted from this domain."}`. Matching is case-insensitive; `example.com` matches only that host, and `*.example.org` matches any subdomain (e.g. `forms.example.org`, `a.b.example.org`) but not `example.org` itself. A missing or unparseable `Referer` is rejected. With no domains set, any referer (or none) is accepted. Both checks run before validation.
+- Validation, stored `input`, metadata and the `FormEntryCreated` event are the same as FR-1.
+- Responds `201` with `{ "data": { "redirect": ..., "message": ... } }` from the form's settings (each `null` when unset). Other settings (`domains`, `timezone`) are not exposed. The API never sends a 3XX: the client shows `message` and/or navigates to `redirect` itself.
+- Validation errors are always JSON (422), even for non-JSON requests.
+- Rate limited twice, each returning `429` when exceeded: 300 requests per minute per client IP across all forms (`throttle:300,1`), and 60 per minute to each form per client IP (the `form-submissions` limiter in `AppServiceProvider`, keyed by the form ID in the URL plus the IP), so one client cannot block a form for others. Rejected requests (403/404/422) count towards both limits.
 
 **FR-2 List entries.** `GET /api/v1/forms/{form}/entries` returns that form's entries, paginated (15 per page), with `links` and `meta`. The sort and filters are kept in pagination links.
 
@@ -99,8 +111,7 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 
 ## 6. Gaps
 
-- **No public submission endpoint.** The store route is behind `auth:api`, so a browser form cannot post to it without exposing an account's JWT. The controller has a TODO to split out an inbound, public-facing endpoint. This is the most significant gap for a "headless form handler".
-- **No spam protection** (captcha, honeypot, rate limiting on submissions). Placeholders only.
+- **No spam protection** (captcha, honeypot). Placeholders only; FR-1a is only rate limited. This matters more now that FR-1a is public. The `Referer` check in FR-1a stops casual cross-site posting from browsers, but non-browser clients can set any `Referer`.
 - **No IP geolocation or user-agent parsing** for the `*_display` fields.
 
 ## 7. Known issues
@@ -109,7 +120,7 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 
 ## 8. Open questions
 
-1. How should public submissions be authenticated — form ID only, per-form public key, allowed origins, signed requests?
+1. Should public submissions have stronger authentication than form ID plus `Referer` (per-form public key, signed requests)?
 2. Should entries record which schema version they were validated against, given schemas can change?
 3. Should spam-flagged entries be stored, quarantined, or discarded?
-4. What should the submission response be for browser posts (JSON vs. redirect to `settings.redirect`)?
+4. Should the authenticated `POST /api/v1/forms/{form}/entries` (FR-1) be kept now that FR-1a exists?

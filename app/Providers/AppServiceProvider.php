@@ -5,8 +5,11 @@ namespace App\Providers;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -27,6 +30,17 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configurePasswordResetUrl();
+        $this->configureRateLimiting();
+    }
+
+    /**
+     * Cap public submissions to each form per client IP, so one client cannot block a form for others.
+     * Throttle middleware runs before route model binding, so the key uses the raw form ID from the URL.
+     */
+    protected function configureRateLimiting(): void
+    {
+        RateLimiter::for('form-submissions', fn (Request $request): Limit => Limit::perMinute(60)
+            ->by($request->route()?->originalParameter('form').'|'.$request->ip()));
     }
 
     /**
