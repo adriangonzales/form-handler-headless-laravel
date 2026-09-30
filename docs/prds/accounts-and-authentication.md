@@ -1,6 +1,6 @@
 # PRD: Accounts & Authentication
 
-**Status:** Built (JWT API only) · **Owner area:** `AuthController`, `AccountController`, `PasswordResetController`, `user:create` command, `LoginRequest`, `UserResource`, `tymon/jwt-auth`, `config/auth.php`, `config/jwt.php`
+**Status:** Built (JWT API only) · **Owner area:** `AuthController`, `AccountController`, `PasswordResetController`, `user:create` command, `LoginRequest`, `UserResource`, `tymon/jwt-auth`, `DatabaseStorage`, `DeniedToken`, `config/auth.php`, `config/jwt.php`
 
 ## 1. Summary
 
@@ -49,6 +49,8 @@ All under `/api/v1/auth`.
 
 **FR-7 Configuration.** `JWT_SECRET` signs tokens (HS256). `composer setup` generates one with `php artisan jwt:secret`. Tests use a fixed secret from `phpunit.xml`. `PASSWORD_RESET_URL` is the client page reset emails link to (default `{APP_URL}/reset-password`).
 
+**FR-7a Deny list.** Logged-out (FR-5), refreshed (FR-4) and otherwise invalidated tokens (FR-13) are stored by their `jti` claim in the `denied_tokens` table (`DeniedToken` model), through the `App\Providers\Jwt\DatabaseStorage` storage provider set in `config/jwt.php`. Clearing the cache does not affect it. A row is kept until the token could no longer be used or refreshed (the later of its expiry and the end of its refresh window, plus a minute), and the hourly `model:prune` then deletes it.
+
 **FR-8 Token revocation.** Each user has a `token_version`, embedded in every token as the `tv` claim and carried through refreshes. Changing or resetting the password increments it, which revokes every token issued before; tokens issued afterwards carry the new version. The `token.current` middleware (on every authenticated route) and the refresh endpoint reject tokens whose version is behind with 401.
 
 **FR-9 Create an account (operator).** `php artisan user:create --name= --email= --password=` creates an account holder; any option left out is prompted for, so the password can be kept out of shell history. The email is lowercased and must be unused, and the password must satisfy the password policy (FR-12). There is no API endpoint for registration.
@@ -72,7 +74,6 @@ All under `/api/v1/auth`.
 - **No multi-factor authentication.** Two-factor authentication and passkeys were removed with the web app.
 - **No "log out everywhere".** Logout invalidates only the presented token. Changing or resetting the password revokes every token (FR-8), but there is no endpoint to do that without changing the password.
 - **No token scopes.** Every token has full access to the owner's data.
-- **The blacklist depends on the cache.** Logged-out and refreshed tokens are recorded in the cache store. Clearing the cache makes them valid again until they expire.
 
 ## 6. Known issues
 

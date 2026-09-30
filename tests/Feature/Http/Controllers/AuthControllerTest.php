@@ -3,7 +3,10 @@
 namespace Tests\Feature\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
+use App\Models\DeniedToken;
 use App\Models\User;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Cache;
 
 beforeEach(function (): void {
     $this->user = User::factory()->create([
@@ -130,6 +133,35 @@ it('invalidates the token on logout', function (): void {
     freshAuthState();
 
     $this->withToken($token)->getJson(route('auth.me'))->assertUnauthorized();
+});
+
+it('keeps a logged out token invalid after the cache is cleared', function (): void {
+    $token = loginToken();
+
+    $this->withToken($token)->postJson(route('auth.logout'))->assertNoContent();
+    freshAuthState();
+    Cache::flush();
+
+    $this->withToken($token)->getJson(route('auth.me'))->assertUnauthorized();
+    expect(DeniedToken::query()->sole()->expires_at)->toBeInstanceOf(CarbonImmutable::class);
+});
+
+it('keeps denied tokens until the refresh window ends, then prunes them', function (): void {
+    $this->freezeSecond();
+    $token = loginToken();
+
+    $this->withToken($token)->postJson(route('auth.logout'))->assertNoContent();
+
+    $denied = DeniedToken::query()->sole();
+    expect($denied->expires_at->equalTo(now()->addMinutes(config('jwt.refresh_ttl') + 1)))->toBeTrue();
+
+    $this->travelTo($denied->expires_at->subSecond());
+    $this->artisan('model:prune', ['--model' => [DeniedToken::class]])->assertSuccessful();
+    expect(DeniedToken::query()->count())->toBe(1);
+
+    $this->travelTo($denied->expires_at);
+    $this->artisan('model:prune', ['--model' => [DeniedToken::class]])->assertSuccessful();
+    expect(DeniedToken::query()->count())->toBe(0);
 });
 
 it('refreshes a token and invalidates the old one', function (): void {
