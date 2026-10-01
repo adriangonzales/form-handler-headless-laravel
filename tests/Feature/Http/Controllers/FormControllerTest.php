@@ -5,6 +5,7 @@ namespace Tests\Feature\Http\Controllers;
 use App\Data\FormSettings;
 use App\Events\FormCreated;
 use App\Models\Form;
+use App\Models\FormEntry;
 use App\Models\User;
 use Illuminate\Support\Facades\Event;
 
@@ -50,6 +51,27 @@ it('lists results from the index', function (): void {
         ],
     ]);
     $response->assertJsonCount(1, 'data');
+});
+
+it('includes total and unread entry counts in the index', function (): void {
+    $user = User::factory()->create();
+    $form = Form::factory()->create(['user_id' => $user->id]);
+    $emptyForm = Form::factory()->create(['user_id' => $user->id, 'created_at' => now()->addMinute()]);
+    FormEntry::factory()->count(2)->create(['form_id' => $form->id, 'read_at' => null]);
+    FormEntry::factory()->create(['form_id' => $form->id, 'read_at' => null, 'spam' => true]);
+    FormEntry::factory()->create(['form_id' => $form->id, 'read_at' => now()]);
+    FormEntry::factory()->create(['form_id' => $form->id, 'read_at' => null])->delete();
+    $this->actingAs($user);
+
+    $response = $this->getJson('/api/v1/forms');
+
+    $response->assertOk();
+    $response->assertJsonPath('data.0.id', $form->id);
+    $response->assertJsonPath('data.0.entries_count', 4);
+    $response->assertJsonPath('data.0.unread_entries_count', 3);
+    $response->assertJsonPath('data.1.id', $emptyForm->id);
+    $response->assertJsonPath('data.1.entries_count', 0);
+    $response->assertJsonPath('data.1.unread_entries_count', 0);
 });
 
 it('shows details of a form', function (): void {

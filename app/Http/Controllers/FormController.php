@@ -26,6 +26,10 @@ class FormController extends Controller
             : $request->sortColumn();
 
         $forms = $request->user()->forms()
+            ->withCount([
+                'entries',
+                'entries as unread_entries_count' => fn (Builder $query) => $query->whereNull('read_at'),
+            ])
             ->when($activeFilter !== null, fn (Builder $query) => $query->where('active', $activeFilter))
             ->orderBy($sortColumn, $request->sortDirection())
             ->orderBy('id', $request->sortDirection())
