@@ -52,6 +52,8 @@ Route::prefix('v1')->group(function () {
             ->name('forms.duplicate');
         Route::post('forms/{form}/entries/exports', [FormEntryExportController::class, 'store'])
             ->name('forms.entries.exports.store');
+        Route::get('entry-exports', [FormEntryExportController::class, 'index'])
+            ->name('entry-exports.index');
         Route::get('entry-exports/{export}', [FormEntryExportController::class, 'show'])
             ->name('entry-exports.show');
         Route::post('forms/{form}/entries/bulk', [FormEntryController::class, 'bulk'])

@@ -417,6 +417,7 @@ it('pages the entry index by the requested page size', function (): void {
     $response->assertJsonCount(2, 'data');
     $response->assertJsonPath('meta.per_page', 2);
     $response->assertJsonPath('meta.last_page', 2);
+
     expect($response->json('links.next'))->toContain('per_page=2');
 });
 

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -54,6 +55,16 @@ class User extends Authenticatable implements JWTSubject
     public function forms(): HasMany
     {
         return $this->hasMany(Form::class);
+    }
+
+    /**
+     * Entry exports of the user's forms, leaving out forms that have been deleted.
+     *
+     * @return HasManyThrough<FormEntryExport, Form, $this>
+     */
+    public function entryExports(): HasManyThrough
+    {
+        return $this->hasManyThrough(FormEntryExport::class, Form::class);
     }
 
     /**

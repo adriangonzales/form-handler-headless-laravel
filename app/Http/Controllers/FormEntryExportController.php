@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\FormEntryExportIndexRequest;
 use App\Http\Requests\FormEntryIndexRequest;
+use App\Http\Resources\FormEntryExportCollection;
 use App\Http\Resources\FormEntryExportResource;
 use App\Jobs\GenerateFormEntryExport;
 use App\Models\Form;
@@ -16,6 +18,23 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FormEntryExportController extends Controller
 {
+    /**
+     * List the exports of the user's forms, newest first, with their status.
+     *
+     * Exports past their `expires_at` are left out, as are exports of deleted forms.
+     */
+    public function index(FormEntryExportIndexRequest $request): FormEntryExportCollection
+    {
+        $exports = $request->user()->entryExports()
+            ->where('form_entry_exports.expires_at', '>', now())
+            ->latest('form_entry_exports.created_at')
+            ->latest('form_entry_exports.id')
+            ->paginate($request->perPage())
+            ->withQueryString();
+
+        return new FormEntryExportCollection($exports);
+    }
+
     /**
      * Queue a CSV export of the form's entries, using the same filters and sort as the entry index.
      */

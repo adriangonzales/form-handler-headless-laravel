@@ -187,6 +187,59 @@ it('forbids exporting entries of a form the user does not own', function (): voi
     $response->assertForbidden();
 });
 
+it('requires authentication to list exports', function (): void {
+    $this->getJson(route('entry-exports.index'))->assertUnauthorized();
+});
+
+it("lists the user's exports across their forms, newest first, with their status", function (): void {
+    $this->actingAs($this->user);
+    $otherForm = Form::factory()->create(['user_id' => $this->user->id]);
+    $deletedForm = Form::factory()->create(['user_id' => $this->user->id]);
+
+    $this->travelTo('2026-01-02 03:00:00');
+    $completed = FormEntryExport::factory()->completed()->create(['form_id' => $this->form->id]);
+    FormEntryExport::factory()->completed()->expired()->create(['form_id' => $this->form->id]);
+    FormEntryExport::factory()->create(['form_id' => $deletedForm->id]);
+    FormEntryExport::factory()->create();
+    $this->travel(1)->minute();
+    $failed = FormEntryExport::factory()->create(['form_id' => $otherForm->id, 'status' => FormEntryExport::STATUS_FAILED, 'error' => 'Boom']);
+    $this->travel(1)->minute();
+    $pending = FormEntryExport::factory()->create(['form_id' => $this->form->id, 'status' => FormEntryExport::STATUS_PENDING]);
+    $deletedForm->delete();
+
+    $response = $this->getJson(route('entry-exports.index'));
+
+    $response->assertOk();
+    expect($response->json('data.*.id'))->toBe([$pending->id, $failed->id, $completed->id])
+        ->and($response->json('data.*.status'))->toBe(['pending', 'failed', 'completed'])
+        ->and($response->json('data.1.error'))->toBe('Boom')
+        ->and($response->json('data.0.download_url'))->toBeNull()
+        ->and($response->json('data.2.download_url'))->toStartWith(route('entry-exports.download', $completed).'?expires=');
+    $response->assertJsonStructure(['data', 'links', 'meta']);
+});
+
+it('pages the export index by the requested page size', function (): void {
+    $this->actingAs($this->user);
+    FormEntryExport::factory()->count(3)->create(['form_id' => $this->form->id]);
+
+    $response = $this->getJson(route('entry-exports.index', ['per_page' => 2]));
+
+    $response->assertOk();
+    $response->assertJsonCount(2, 'data');
+    $response->assertJsonPath('meta.per_page', 2);
+
+    expect($response->json('links.next'))->toContain('per_page=2');
+});
+
+it('rejects an export index page size outside 1 to 100', function (mixed $perPage): void {
+    $this->actingAs($this->user);
+
+    $response = $this->getJson(route('entry-exports.index', ['per_page' => $perPage]));
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors('per_page');
+})->with([0, 101, 'all']);
+
 it('queues an export and returns its status', function (): void {
     Queue::fake();
     $this->actingAs($this->user);
