@@ -37,6 +37,8 @@ php artisan migrate --force
 
 `key:generate` sets `APP_KEY`, used for encryption. `jwt:secret` sets `JWT_SECRET`, used to sign API tokens. Changing `JWT_SECRET` later signs every user out.
 
+API tokens last `JWT_TTL` minutes (default 60). They can be refreshed until `JWT_REFRESH_TTL` minutes (default 10080, 7 days) after login, after which the user must log in again.
+
 The default `.env` uses SQLite (`database/database.sqlite`). To use MySQL or PostgreSQL instead, set `DB_CONNECTION` and the `DB_*` values in `.env` before running migrations.
 
 ### Create an account

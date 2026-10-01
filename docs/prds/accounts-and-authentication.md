@@ -41,7 +41,7 @@ All under `/api/v1/auth`.
 
 **FR-3 Authenticated requests.** Every `/api/v1` route other than login and refresh requires `Authorization: Bearer <token>`. A missing, malformed, expired, invalidated or revoked (see FR-8) token returns `401 {"message":"Unauthenticated."}`. All responses, including errors, are JSON. Guests are never redirected.
 
-**FR-4 Refresh.** `POST /api/v1/auth/refresh` with the current token, which may already be expired, returns a new token in the FR-1 shape. The old token is blacklisted. The refresh window is measured from the **original login**: a refreshed token keeps the first token's issued-at (`iat`) claim, so a chain of refreshes ends `JWT_REFRESH_TTL` minutes (default 20160 = 14 days) after login and the user must log in again. After that, without a valid token, or for a revoked token (FR-8), refresh returns 401.
+**FR-4 Refresh.** `POST /api/v1/auth/refresh` with the current token, which may already be expired, returns a new token in the FR-1 shape. The old token is blacklisted. The refresh window is measured from the **original login**: a refreshed token keeps the first token's issued-at (`iat`) claim, so a chain of refreshes ends `JWT_REFRESH_TTL` minutes (default 10080 = 7 days) after login and the user must log in again. After that, without a valid token, or for a revoked token (FR-8), refresh returns 401.
 
 **FR-5 Log out.** `POST /api/v1/auth/logout` blacklists the current token and returns 204.
 
@@ -81,5 +81,5 @@ None currently.
 
 ## 7. Open questions
 
-1. Is a 60-minute access token with a 14-day refresh window right, or should refresh tokens be separate and revocable?
+1. Is a 60-minute access token with a 7-day refresh window right, or should refresh tokens be separate and revocable?
 2. Should per-form public keys be introduced for form submissions, separate from account JWTs?

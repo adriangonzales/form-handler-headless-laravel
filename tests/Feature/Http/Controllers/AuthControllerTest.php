@@ -202,7 +202,7 @@ it('rejects refresh without a token', function (): void {
 it('measures the refresh window from the original login', function (): void {
     $token = loginToken();
 
-    $this->travel(13)->days();
+    $this->travel(6)->days();
     $refreshed = $this->withToken($token)->postJson(route('auth.refresh'))
         ->assertOk()
         ->json('access_token');
@@ -210,4 +210,15 @@ it('measures the refresh window from the original login', function (): void {
 
     $this->travel(2)->days();
     $this->withToken($refreshed)->postJson(route('auth.refresh'))->assertUnauthorized();
+});
+
+it('rejects refresh once the token is older than the 7-day refresh window', function (): void {
+    $this->travelTo('2026-01-01 00:00:00');
+    $token = loginToken();
+
+    $this->travelTo('2026-01-08 00:00:01');
+    $response = $this->withToken($token)->postJson(route('auth.refresh'));
+
+    $response->assertUnauthorized();
+    $response->assertExactJson(['message' => 'Unauthenticated.']);
 });
