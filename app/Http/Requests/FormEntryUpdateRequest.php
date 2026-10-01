@@ -37,6 +37,18 @@ class FormEntryUpdateRequest extends FormRequest
     {
         return [
             ...array_fill_keys(self::SUBMISSION_FIELDS, ['prohibited']),
+            /**
+             * Recorded at submission time. Rejected if sent.
+             *
+             * @var array<string, mixed>|null
+             */
+            'input' => ['prohibited'],
+            /**
+             * Recorded at submission time. Rejected if sent.
+             *
+             * @var array{platform: string|null, browser: string|null, browser_version: string|null}|null
+             */
+            'user_agent_display' => ['prohibited'],
             'spam' => ['nullable', 'boolean'],
             'spam_score' => ['sometimes', 'required', 'numeric', 'between:0,9.999'],
             'spam_reason' => ['nullable', 'string'],

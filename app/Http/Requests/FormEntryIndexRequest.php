@@ -48,6 +48,11 @@ class FormEntryIndexRequest extends FormRequest
 
         return [
             'sort' => ['sometimes', 'string', Rule::in($sorts)],
+            /**
+             * Every filter is optional. Unknown keys are rejected.
+             *
+             * @var array{read?: string, starred?: string, spam?: string, created_from?: string, created_to?: string, trashed?: string}
+             */
             'filter' => ['sometimes', 'array:'.implode(',', self::FILTERS)],
             'filter.read' => ['sometimes', $booleans],
             'filter.starred' => ['sometimes', $booleans],

@@ -7,6 +7,7 @@ use App\Http\Resources\FormEntryExportResource;
 use App\Jobs\GenerateFormEntryExport;
 use App\Models\Form;
 use App\Models\FormEntryExport;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -43,10 +44,18 @@ class FormEntryExportController extends Controller
         return new FormEntryExportResource($export);
     }
 
+    /**
+     * Download a completed export's CSV.
+     *
+     * Reached through the temporary signed `download_url` from an export response, not the API token:
+     * the signature shows the link was issued to a user allowed to view the export. A missing, altered
+     * or expired signature returns 403.
+     *
+     * @unauthenticated
+     */
+    #[Response(403, 'Missing, invalid or expired signature', type: 'array{message: string}', examples: [['message' => 'Invalid signature.']])]
     public function download(FormEntryExport $export): StreamedResponse
     {
-        Gate::authorize('view', $export);
-
         abort_if($export->isExpired(), 410, 'This export has expired.');
         abort_unless($export->isCompleted() && $export->path !== null, 409, 'This export is not ready.');
 

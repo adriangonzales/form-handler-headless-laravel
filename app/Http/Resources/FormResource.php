@@ -26,6 +26,7 @@ class FormResource extends JsonResource
             'name' => $this->name,
             'active' => $this->active,
             'schema' => $this->schema,
+            /** @var array{redirect: string|null, timezone: string|null, domains: list<string>|null, message: string|null, honeypot_enabled: bool, honeypot_name: string|null}|null */
             'settings' => $this->settings,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
