@@ -268,6 +268,7 @@ it('downloads through the signed link without an API token', function (): void {
 
     $response->assertOk();
     $response->assertDownload('contact-entries.csv');
+
     expect($response->streamedContent())->toBe("id\n");
 });
 
@@ -292,7 +293,7 @@ it('forbids downloading without a valid signature', function (Closure $url): voi
 })->with([
     'no signature' => fn (FormEntryExport $export): string => route('entry-exports.download', $export),
     'altered signature' => fn (FormEntryExport $export): string => signedDownloadUrl($export).'0',
-    'another export\'s signature' => fn (FormEntryExport $export, FormEntryExport $other): string => str_replace($other->id, $export->id, signedDownloadUrl($other)),
+    "another export's signature" => fn (FormEntryExport $export, FormEntryExport $other): string => str_replace($other->id, $export->id, signedDownloadUrl($other)),
 ]);
 
 it('forbids downloading with an API token but no signature', function (): void {
