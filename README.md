@@ -61,6 +61,8 @@ php artisan serve
 
 The API is then available at `http://127.0.0.1:8000/api/v1`.
 
+Behind a load balancer or reverse proxy, set `TRUSTED_PROXIES` (Laravel Cloud, Forge and Vapor are trusted automatically) so URLs in API responses, such as entry export download links, use the public host and scheme.
+
 ## API Documentation
 
 The API Documentation is then available at `http://127.0.0.1:8000/docs/api/`.
