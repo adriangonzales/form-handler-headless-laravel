@@ -88,7 +88,7 @@ The factory's `withBasicSchema()` state and the tests use ULIDs as field IDs, bu
 
 **FR-1 List forms.** `GET /api/v1/forms` returns the authenticated user's forms only, paginated (Laravel default of 15 per page) with `links` and `meta`. Pagination links keep all query parameters.
 
-- **Entry counts:** each form in the list also has `entries_count` and `unread_entries_count` (entries with no `read_at`). Both leave out deleted entries and include spam, so they match the totals of the entry list with no filters and with `filter[read]=false`. Other form responses don't include them.
+- **Entry counts:** each form in the list also has `entries_count`, `unread_entries_count` and `spam_entries_count`, none of which include deleted entries. `entries_count` counts entries that aren't spam, matching the total of the entry list with `filter[spam]=false`. `unread_entries_count` counts those with no `read_at` (`filter[read]=false&filter[spam]=false`). `spam_entries_count` counts spam entries (`filter[spam]=true`). Other form responses don't include them.
 
 - **Sorting:** the optional `sort` parameter accepts `created_at` (the default), `updated_at` or `name`. Prefix it with `-` for descending order, e.g. `sort=-updated_at`. Names are compared case-insensitively. Ties are broken by ID in the same direction. Any other value, including combined sorts such as `name,-created_at`, returns 422 on `sort`.
 - **Filtering:** `filter[active]=true` or `filter[active]=false` (`1` and `0` also work) limits the list to active or inactive forms. Any other value returns 422 on `filter.active`, and any other filter key returns 422 on `filter`. Filtering and sorting can be combined.

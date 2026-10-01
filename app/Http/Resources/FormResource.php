@@ -28,10 +28,12 @@ class FormResource extends JsonResource
             'schema' => $this->schema,
             /** @var array{redirect: string|null, timezone: string|null, domains: list<string>|null, message: string|null, honeypot_enabled: bool, honeypot_name: string|null}|null */
             'settings' => $this->settings,
-            /** Entries on the form, excluding deleted ones. Included in the form list only. */
+            /** Entries on the form, excluding spam and deleted ones. Included in the form list only. */
             'entries_count' => $this->whenCounted('entries'),
-            /** Entries on the form not yet marked read, excluding deleted ones. Included in the form list only. */
+            /** Entries on the form not yet marked read, excluding spam and deleted ones. Included in the form list only. */
             'unread_entries_count' => $this->whenCounted('unread_entries'),
+            /** Entries on the form marked as spam, excluding deleted ones. Included in the form list only. */
+            'spam_entries_count' => $this->whenCounted('spam_entries'),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'deleted_at' => $this->deleted_at,

@@ -25,10 +25,15 @@ class FormController extends Controller
             ? DB::raw('lower(name)')
             : $request->sortColumn();
 
+        $notSpam = fn (Builder $query) => $query->where(
+            fn (Builder $query) => $query->where('spam', false)->orWhereNull('spam')
+        );
+
         $forms = $request->user()->forms()
             ->withCount([
-                'entries',
-                'entries as unread_entries_count' => fn (Builder $query) => $query->whereNull('read_at'),
+                'entries' => $notSpam,
+                'entries as unread_entries_count' => fn (Builder $query) => $notSpam($query)->whereNull('read_at'),
+                'entries as spam_entries_count' => fn (Builder $query) => $query->where('spam', true),
             ])
             ->when($activeFilter !== null, fn (Builder $query) => $query->where('active', $activeFilter))
             ->orderBy($sortColumn, $request->sortDirection())
