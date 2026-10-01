@@ -27,7 +27,6 @@ beforeEach(function (): void {
 
 it('queues an alert for each enabled email recipient when an entry is submitted', function (): void {
     Queue::fake([DeliverFormEntryAlert::class]);
-    $this->actingAs($this->user);
 
     $alerted = FormNotification::factory()->create(['form_id' => $this->form->id, 'type' => 'email', 'enabled' => true]);
     FormNotification::factory()->create(['form_id' => $this->form->id, 'type' => 'email', 'enabled' => false]);
@@ -35,7 +34,7 @@ it('queues an alert for each enabled email recipient when an entry is submitted'
     tap(FormNotification::factory()->create(['form_id' => $this->form->id, 'type' => 'email', 'enabled' => true]))->delete();
     FormNotification::factory()->create(['type' => 'email', 'enabled' => true]);
 
-    $this->postJson(route('forms.entries.store', $this->form), ['field_1' => 'Ada', 'message' => 'Hello'])->assertCreated();
+    $this->postJson(route('forms.submissions.store', $this->form), ['field_1' => 'Ada', 'message' => 'Hello'])->assertCreated();
 
     Queue::assertPushed(DeliverFormEntryAlert::class, 1);
     Queue::assertPushed(DeliverFormEntryAlert::class, fn (DeliverFormEntryAlert $job): bool => $job->recipient->is($alerted)

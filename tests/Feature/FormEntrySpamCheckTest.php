@@ -1,6 +1,6 @@
 <?php
 
-use App\Events\FormEntryCreated;
+use App\Events\FormEntrySubmitted;
 use App\Jobs\DeliverFormEntryAlert;
 use App\Listeners\CheckFormEntryForSpam;
 use App\Models\Form;
@@ -39,7 +39,7 @@ it('flags an entry Jev is confident is spam and does not alert for it', function
         'spam_reason' => null,
     ]);
 
-    event(new FormEntryCreated($entry));
+    event(new FormEntrySubmitted($entry));
 
     expect($entry->fresh())
         ->spam->toBeTrue()
@@ -56,7 +56,7 @@ it('keeps an entry below the spam threshold and alerts for it', function (): voi
     Classification::fake([['is_spam' => new BooleanAnswer(0.6)]]);
     $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'spam' => false, 'spam_reason' => null]);
 
-    event(new FormEntryCreated($entry));
+    event(new FormEntrySubmitted($entry));
 
     expect($entry->fresh())
         ->spam->toBeFalse()
@@ -70,7 +70,7 @@ it('does not classify an entry already flagged as spam', function (): void {
     Classification::fake();
     $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'spam' => true, 'spam_reason' => 'Honeypot field was filled in.']);
 
-    event(new FormEntryCreated($entry));
+    event(new FormEntrySubmitted($entry));
 
     Classification::assertNothingClassified();
     expect($entry->fresh()->spam_reason)->toBe('Honeypot field was filled in.');
@@ -82,7 +82,7 @@ it('leaves the entry as submitted and still alerts when classification is unavai
     $setUp();
     $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'spam' => false, 'spam_score' => 0, 'spam_reason' => null]);
 
-    event(new FormEntryCreated($entry));
+    event(new FormEntrySubmitted($entry));
 
     expect($entry->fresh())
         ->spam->toBeFalse()
@@ -106,7 +106,7 @@ it('logs a failed classification', function (): void {
     Classification::fake(fn () => throw new RuntimeException('Connection timed out'));
     $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'spam' => false]);
 
-    event(new FormEntryCreated($entry));
+    event(new FormEntrySubmitted($entry));
 
     Log::shouldHaveReceived('warning')->once()->with('Could not classify a form entry for spam.', [
         'form_entry_id' => $entry->id,

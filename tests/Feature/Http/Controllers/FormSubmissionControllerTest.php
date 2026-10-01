@@ -1,6 +1,7 @@
 <?php
 
 use App\Events\FormEntryCreated;
+use App\Events\FormEntrySubmitted;
 use App\Jobs\DeliverFormEntryAlert;
 use App\Models\Form;
 use App\Models\FormNotification;
@@ -47,6 +48,7 @@ it('accepts a submission without authentication and responds with the redirect a
     expect($entry->ip)->toBe('127.0.0.1');
 
     Event::assertDispatched(FormEntryCreated::class, fn (FormEntryCreated $event): bool => $event->formEntry->is($entry));
+    Event::assertDispatched(FormEntrySubmitted::class, fn (FormEntrySubmitted $event): bool => $event->formEntry->is($entry));
 });
 
 it('responds with a null redirect and message when the form has no settings', function (): void {

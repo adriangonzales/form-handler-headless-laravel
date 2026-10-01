@@ -3,12 +3,17 @@
 namespace Tests\Feature\Http\Controllers;
 
 use App\Events\FormEntryCreated;
+use App\Events\FormEntrySubmitted;
 use App\Http\Requests\FormEntryUpdateRequest;
+use App\Jobs\DeliverFormEntryAlert;
 use App\Models\Form;
 use App\Models\FormEntry;
+use App\Models\FormNotification;
 use App\Models\User;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
+use Laravel\Ai\Classification;
 
 beforeEach(function (): void {
     $this->user = User::factory()->create();
@@ -147,6 +152,26 @@ it('creates a new form entry', function (): void {
     Event::assertDispatched(FormEntryCreated::class, function ($event) use ($formEntry) {
         return $event->formEntry->is($formEntry);
     });
+    Event::assertNotDispatched(FormEntrySubmitted::class);
+});
+
+it('does not check for spam, alert or parse the user agent for entries created through the API', function (): void {
+    config(['ai.providers.typesafe.key' => 'test-key']);
+    Classification::fake();
+    Queue::fake([DeliverFormEntryAlert::class]);
+    FormNotification::factory()->create(['form_id' => $this->form->id, 'type' => 'email', 'enabled' => true]);
+    $this->form->update(['active' => true]);
+    $this->actingAs($this->user);
+
+    $response = $this->withHeaders(['User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'])
+        ->postJson(route('forms.entries.store', $this->form));
+
+    $response->assertCreated();
+    expect($this->form->entries()->sole())
+        ->spam->toBeFalse()
+        ->user_agent_display->toBeNull();
+    Classification::assertNothingClassified();
+    Queue::assertNotPushed(DeliverFormEntryAlert::class);
 });
 
 it('records the referer of a submission', function (?string $referer, ?string $expected): void {

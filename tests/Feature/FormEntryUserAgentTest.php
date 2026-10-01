@@ -1,6 +1,6 @@
 <?php
 
-use App\Events\FormEntryCreated;
+use App\Events\FormEntrySubmitted;
 use App\Listeners\ParseFormEntryUserAgent;
 use App\Models\Form;
 use App\Models\FormEntry;
@@ -49,7 +49,7 @@ it('stores null for the parts of a user agent that cannot be identified', functi
 it('leaves the parsed user agent empty when an entry has no user agent', function (?string $userAgent): void {
     $entry = FormEntry::factory()->create(['user_agent' => $userAgent, 'user_agent_display' => null]);
 
-    event(new FormEntryCreated($entry));
+    event(new FormEntrySubmitted($entry));
 
     expect($entry->fresh()->user_agent_display)->toBeNull();
 })->with([

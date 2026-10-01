@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Listeners;
 
-use App\Events\FormEntryCreated;
 use App\Events\FormEntrySpamChecked;
+use App\Events\FormEntrySubmitted;
 use App\Models\FormEntry;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
@@ -32,7 +34,7 @@ class CheckFormEntryForSpam implements ShouldQueue
      * probability, then announce that the spam check is done. Without a TypeSafe API key, or when
      * the call fails, the entry is left as submitted so its alerts are still sent.
      */
-    public function handle(FormEntryCreated $event): void
+    public function handle(FormEntrySubmitted $event): void
     {
         $entry = $event->formEntry;
 
@@ -65,10 +67,10 @@ class CheckFormEntryForSpam implements ShouldQueue
                 ->timeout(10)
                 ->classify()
                 ->answer('is_spam');
-        } catch (Throwable $exception) {
+        } catch (Throwable $throwable) {
             Log::warning('Could not classify a form entry for spam.', [
                 'form_entry_id' => $entry->id,
-                'error' => $exception->getMessage(),
+                'error' => $throwable->getMessage(),
             ]);
 
             return;
