@@ -86,7 +86,7 @@ The factory's `withBasicSchema()` state and the tests use ULIDs as field IDs, bu
 
 ## 6. Functional requirements
 
-**FR-1 List forms.** `GET /api/v1/forms` returns the authenticated user's forms only, paginated (Laravel default of 15 per page) with `links` and `meta`. Pagination links keep all query parameters.
+**FR-1 List forms.** `GET /api/v1/forms` returns the authenticated user's forms only, paginated (15 per page by default; `per_page` sets 1 to 100, anything else returns 422 on `per_page`) with `links` and `meta`. Pagination links keep all query parameters.
 
 - **Entry counts:** each form in the list also has `entries_count`, `unread_entries_count` and `spam_entries_count`, none of which include deleted entries. `entries_count` counts entries that aren't spam, matching the total of the entry list with `filter[spam]=false`. `unread_entries_count` counts those with no `read_at` (`filter[read]=false&filter[spam]=false`). `spam_entries_count` counts spam entries (`filter[spam]=true`). Other form responses don't include them.
 

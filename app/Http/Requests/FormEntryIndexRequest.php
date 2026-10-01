@@ -13,6 +13,11 @@ use Illuminate\Validation\Rule;
 class FormEntryIndexRequest extends FormRequest
 {
     /**
+     * Largest page size a client may request with "per_page".
+     */
+    public const int MAX_PER_PAGE = 100;
+
+    /**
      * Columns the index can be sorted by. Prefix with "-" to sort descending, JSON:API style.
      *
      * @var list<string>
@@ -47,6 +52,8 @@ class FormEntryIndexRequest extends FormRequest
         $booleans = Rule::in(['true', 'false', '1', '0']);
 
         return [
+            /** Results per page, from 1 to 100. Defaults to 15. Ignored when requesting an export. */
+            'per_page' => ['sometimes', 'integer', 'between:1,'.self::MAX_PER_PAGE],
             'sort' => ['sometimes', 'string', Rule::in($sorts)],
             /**
              * Every filter is optional. Unknown keys are rejected.
@@ -71,5 +78,13 @@ class FormEntryIndexRequest extends FormRequest
     public function parameters(): array
     {
         return $this->safe()->only(['sort', 'filter']);
+    }
+
+    /**
+     * Get the requested page size, defaulting to 15.
+     */
+    public function perPage(): int
+    {
+        return $this->integer('per_page', 15);
     }
 }

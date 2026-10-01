@@ -572,6 +572,29 @@ it('sorts the form index by created_at', function (?string $sort, array $expecte
     'descending' => ['-created_at', [1, 2, 0]],
 ]);
 
+it('pages the form index by the requested page size', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    Form::factory()->count(3)->create(['user_id' => $user->id]);
+
+    $response = $this->getJson(route('forms.index', ['per_page' => 2]));
+
+    $response->assertOk();
+    $response->assertJsonCount(2, 'data');
+    $response->assertJsonPath('meta.per_page', 2);
+    $response->assertJsonPath('meta.last_page', 2);
+    expect($response->json('links.next'))->toContain('per_page=2');
+});
+
+it('rejects a page size outside 1 to 100', function (mixed $perPage): void {
+    $this->actingAs(User::factory()->create());
+
+    $response = $this->getJson(route('forms.index', ['per_page' => $perPage]));
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors('per_page');
+})->with([0, 101, 'all', 2.5]);
+
 it('keeps the sort in pagination links', function (): void {
     $user = User::factory()->create();
     $this->actingAs($user);

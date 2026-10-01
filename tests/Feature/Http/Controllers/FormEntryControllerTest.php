@@ -403,6 +403,19 @@ it('keeps the sort and filters in entry pagination links', function (): void {
         ->toContain('filter[starred]=true');
 });
 
+it('pages the entry index by the requested page size', function (): void {
+    $this->actingAs($this->user);
+    FormEntry::factory()->count(3)->create(['form_id' => $this->form->id]);
+
+    $response = $this->getJson(route('forms.entries.index', [$this->form, 'per_page' => 2]));
+
+    $response->assertOk();
+    $response->assertJsonCount(2, 'data');
+    $response->assertJsonPath('meta.per_page', 2);
+    $response->assertJsonPath('meta.last_page', 2);
+    expect($response->json('links.next'))->toContain('per_page=2');
+});
+
 it('rejects an invalid entry sort or filter', function (array $query, string $errorKey): void {
     $this->actingAs($this->user);
 
@@ -418,6 +431,9 @@ it('rejects an invalid entry sort or filter', function (array $query, string $er
     'invalid date' => [['filter' => ['created_from' => '2026-02-01T00:00:00']], 'filter.created_from'],
     'reversed range' => [['filter' => ['created_from' => '2026-02-02', 'created_to' => '2026-02-01']], 'filter.created_to'],
     'invalid trashed value' => [['filter' => ['trashed' => 'all']], 'filter.trashed'],
+    'page size too small' => [['per_page' => 0], 'per_page'],
+    'page size too large' => [['per_page' => 101], 'per_page'],
+    'non-integer page size' => [['per_page' => 'all'], 'per_page'],
 ]);
 
 it('forbids listing entries for a form the user does not own', function (): void {

@@ -22,7 +22,7 @@ class FormEntryController extends Controller
     public function index(FormEntryIndexRequest $request, Form $form, FilterEntries $filterEntries): FormEntryCollection
     {
         $formEntries = $filterEntries($form, $request->parameters())
-            ->paginate()
+            ->paginate($request->perPage())
             ->withQueryString();
 
         return new FormEntryCollection($formEntries);

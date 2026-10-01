@@ -38,7 +38,7 @@ class FormController extends Controller
             ->when($activeFilter !== null, fn (Builder $query) => $query->where('active', $activeFilter))
             ->orderBy($sortColumn, $request->sortDirection())
             ->orderBy('id', $request->sortDirection())
-            ->paginate()
+            ->paginate($request->perPage())
             ->withQueryString();
 
         return new FormCollection($forms);
