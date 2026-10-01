@@ -2,17 +2,17 @@
 
 namespace App\Listeners;
 
-use App\Events\FormEntryCreated;
+use App\Events\FormEntrySpamChecked;
 use App\Jobs\DeliverFormEntryAlert;
 use App\Models\FormNotification;
 
 class SendFormEntryAlerts
 {
     /**
-     * Queue an alert to each enabled email recipient of the entry's form. Entries flagged as spam are
-     * not alerted. SMS recipients are skipped until an SMS channel exists.
+     * Queue an alert to each enabled email recipient of the entry's form once its spam check is done.
+     * Entries flagged as spam are not alerted. SMS recipients are skipped until an SMS channel exists.
      */
-    public function handle(FormEntryCreated $event): void
+    public function handle(FormEntrySpamChecked $event): void
     {
         $entry = $event->formEntry;
 

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Events\FormEntryCreated;
+use App\Events\FormEntrySpamChecked;
 use App\Jobs\DeliverFormEntryAlert;
 use App\Mail\NewFormEntry;
 use App\Models\Form;
@@ -26,7 +26,7 @@ beforeEach(function (): void {
 });
 
 it('queues an alert for each enabled email recipient when an entry is submitted', function (): void {
-    Queue::fake();
+    Queue::fake([DeliverFormEntryAlert::class]);
     $this->actingAs($this->user);
 
     $alerted = FormNotification::factory()->create(['form_id' => $this->form->id, 'type' => 'email', 'enabled' => true]);
@@ -47,7 +47,7 @@ it('does not alert for entries flagged as spam', function (): void {
     FormNotification::factory()->create(['form_id' => $this->form->id, 'type' => 'email', 'enabled' => true]);
     $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'spam' => true]);
 
-    event(new FormEntryCreated($entry));
+    event(new FormEntrySpamChecked($entry));
 
     Queue::assertNotPushed(DeliverFormEntryAlert::class);
 });

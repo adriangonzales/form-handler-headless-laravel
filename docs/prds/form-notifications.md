@@ -59,7 +59,7 @@ Responds `201` with the recipient resource.
 
 ## 6. Alert delivery
 
-**FR-6 Alert on new entries.** When an entry is created (`FormEntryCreated`), the `SendFormEntryAlerts` listener queues one `DeliverFormEntryAlert` job per recipient of that form that is enabled, not deleted and of type `email`. Entries flagged as spam are not alerted. SMS recipients are skipped (see Gaps).
+**FR-6 Alert on new entries.** Once a new entry's spam check is done (`FormEntrySpamChecked`, see Form Entries), the `SendFormEntryAlerts` listener queues one `DeliverFormEntryAlert` job per recipient of that form that is enabled, not deleted and of type `email`. Entries flagged as spam are not alerted. SMS recipients are skipped (see Gaps).
 
 **FR-7 Alert email.** The `NewFormEntry` mailable is sent to the recipient's address with the subject `New entry: {form name}`. It lists the submission time and each schema field's label with the submitted value (`—` when empty; lists joined with `, `), as HTML and plain text. Values are HTML-escaped and never rendered as Markdown, so submitted content cannot inject links or markup.
 

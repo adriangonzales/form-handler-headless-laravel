@@ -58,6 +58,7 @@ The entry is created by the `App\Actions\FormEntries\CreateFormEntry` action, sh
 - If the form's `settings.domains` is non-empty, the `Referer` header's host must match one of them, or the request is rejected with `403 {"message":"Submissions are not accepted from this domain."}`. Matching is case-insensitive; `example.com` matches only that host, and `*.example.org` matches any subdomain (e.g. `forms.example.org`, `a.b.example.org`) but not `example.org` itself. A missing or unparseable `Referer` is rejected. With no domains set, any referer (or none) is accepted. Both checks run before validation.
 - Validation, stored `input`, metadata and the `FormEntryCreated` event are the same as FR-1.
 - **Honeypot.** When `settings.honeypot_enabled` is true, the site's form should include a hidden input named `settings.honeypot_name` that people leave empty. If a submission gives it a non-empty value, it still gets the normal success response (so bots cannot tell) and is stored as usual, but with `spam: true` and `spam_reason: "Honeypot field was filled in."`, so no alerts are sent. The honeypot value itself is not stored. Submissions that fail validation return 422 whether or not the honeypot is filled.
+- **Spam classification.** After an entry is created, the queued `CheckFormEntryForSpam` listener asks Jev (TypeSafe, through `laravel/ai`) whether it is spam, sending the form name, referer and submitted input (truncated to 10,000 characters). Entries already flagged (e.g. by the honeypot) are skipped. The probability is stored in `spam_score`; at 0.9 or above the entry gets `spam: true` and `spam_reason: "Jev classified this entry as spam."`, otherwise `spam: false`. Without `TYPESAFE_API_KEY`, or when the call fails (logged as a warning), the entry is left as submitted. Either way the listener then fires `FormEntrySpamChecked`, which sends alerts.
 - Responds `201` with `{ "data": { "redirect": ..., "message": ... } }` from the form's settings (each `null` when unset). Other settings (`domains`, `timezone`) are not exposed. The API never sends a 3XX: the client shows `message` and/or navigates to `redirect` itself.
 - Validation errors are always JSON (422), even for non-JSON requests.
 - Rate limited twice, each returning `429` when exceeded: 300 requests per minute per client IP across all forms (`throttle:300,1`), and 60 per minute to each form per client IP (the `form-submissions` limiter in `AppServiceProvider`, keyed by the form ID in the URL plus the IP), so one client cannot block a form for others. Rejected requests (403/404/422) count towards both limits.
@@ -112,7 +113,7 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 
 ## 6. Gaps
 
-- **Limited spam protection.** FR-1a has rate limiting and an optional honeypot; there is no CAPTCHA. This matters more now that FR-1a is public. The `Referer` check in FR-1a stops casual cross-site posting from browsers, but non-browser clients can set any `Referer`.
+- **Limited spam protection.** FR-1a has rate limiting, an optional honeypot and Jev classification; there is no CAPTCHA. This matters more now that FR-1a is public. The `Referer` check in FR-1a stops casual cross-site posting from browsers, but non-browser clients can set any `Referer`.
 - **No IP geolocation** for `ip_location_display`.
 
 ## 7. Known issues
