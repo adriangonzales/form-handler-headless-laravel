@@ -163,6 +163,23 @@ it('updates a form notification', function (): void {
         ->enabled->toBeTrue();
 });
 
+it('rejects a non-boolean enabled value when updating a form notification', function (string $enabled): void {
+    $this->actingAs($this->user);
+
+    $notification = FormNotification::factory()->create(['form_id' => $this->form->id, 'type' => 'email', 'enabled' => false]);
+
+    $response = $this->putJson(route('notifications.update', $notification), [
+        'type' => 'email',
+        'value' => 'alerts@example.com',
+        'enabled' => $enabled,
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors('enabled');
+
+    expect($notification->fresh()->enabled)->toBeFalse();
+})->with(['banana', 'yes']);
+
 it('does not move a form notification to another form', function (): void {
     $this->actingAs($this->user);
 

@@ -76,9 +76,9 @@ Every endpoint below except submission is restricted to the owner of the entry's
 | Field         | Rules                      |
 | ------------- | -------------------------- |
 | `spam_score`  | optional, numeric, 0–9.999 |
-| `starred`     | optional                   |
+| `starred`     | optional, boolean          |
 | `spam_reason` | nullable, string           |
-| `spam`        | nullable                   |
+| `spam`        | nullable, boolean          |
 | `read_at`     | nullable, date             |
 
 Every field is optional, so a PATCH can change a single field (e.g. just `read_at`) and leaves the rest untouched; `spam_score` and `starred` cannot be set to `null`. The submission fields (`input`, `ip`, `ip_location_display`, `referer`, `user_agent`, `user_agent_display`) are recorded at submission time and are read-only: sending any of them returns 422 on that field and nothing is changed.

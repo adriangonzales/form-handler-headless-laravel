@@ -13,13 +13,15 @@ use Spatie\LaravelData\Support\DataConfig;
 trait FormSettingsValidationRules
 {
     /**
-     * Get the validation rules for a form's settings, derived from the FormSettings data object.
+     * Get the rule for the settings object itself: nullable, and limited to the keys defined by the
+     * FormSettings data object so unknown keys are rejected rather than silently dropped.
      *
-     * Unknown settings keys are rejected rather than silently dropped.
+     * Kept apart from settingsFieldRules() so each request can document the `settings` key's type for
+     * the API docs, which only read docblocks on keys written directly in rules().
      *
-     * @return array<string, array<int, ValidationRule|array<mixed>|string>>
+     * @return list<string>
      */
-    protected function settingsRules(): array
+    protected function settingsRule(): array
     {
         $allowedKeys = resolve(DataConfig::class)
             ->getDataClass(FormSettings::class)
@@ -27,16 +29,26 @@ trait FormSettingsValidationRules
             ->keys()
             ->implode(',');
 
-        $rules = [
-            'settings' => ['nullable', 'array:'.$allowedKeys],
-        ];
+        return ['nullable', 'array:'.$allowedKeys];
+    }
 
+    /**
+     * Get the validation rules for each sent setting, derived from the FormSettings data object.
+     *
+     * @return array<string, array<int, ValidationRule|array<mixed>|string>>
+     */
+    protected function settingsFieldRules(): array
+    {
         $settings = $this->input('settings');
 
-        if (is_array($settings)) {
-            foreach (FormSettings::getValidationRules($settings) as $key => $settingRules) {
-                $rules['settings.'.$key] = $settingRules;
-            }
+        if (! is_array($settings)) {
+            return [];
+        }
+
+        $rules = [];
+
+        foreach (FormSettings::getValidationRules($settings) as $key => $settingRules) {
+            $rules['settings.'.$key] = $settingRules;
         }
 
         return $rules;

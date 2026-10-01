@@ -518,6 +518,25 @@ it('rejects an empty value for a sent triage field', function (string $field): v
     $response->assertJsonValidationErrors($field);
 })->with(['spam_score', 'starred']);
 
+it('rejects non-boolean triage flags on update', function (string $field, mixed $value): void {
+    $this->actingAs($this->user);
+
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'starred' => false, 'spam' => false]);
+
+    $response = $this->patchJson(route('entries.update', $entry), [$field => $value]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors($field);
+    expect($entry->fresh())
+        ->starred->toBeFalse()
+        ->spam->toBeFalse();
+})->with([
+    'starred word' => ['starred', 'banana'],
+    'starred yes' => ['starred', 'yes'],
+    'spam word' => ['spam', 'banana'],
+    'spam yes' => ['spam', 'yes'],
+]);
+
 it('rejects changes to submission fields on update', function (string $field, mixed $value): void {
     $this->actingAs($this->user);
 

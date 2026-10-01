@@ -13,6 +13,9 @@ class FormSubmissionController extends Controller
     /**
      * Accept a public, unauthenticated submission to a form.
      *
+     * The body fields are the form's schema input names (each field's `name`, or its ID), validated with
+     * the field's rules. Unknown fields are dropped.
+     *
      * Responds with the form's `redirect` and `message` settings so the client can show the
      * success message or navigate to the redirect itself; no 3XX redirect is ever sent.
      *

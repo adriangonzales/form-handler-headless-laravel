@@ -45,18 +45,15 @@ class FormEntryBulkRequest extends FormRequest
      * Get the validation rules that apply to the request.
      *
      * Every ID must belong to the form and be in the right state for the action: deleted for
-     * restore and force_delete, not deleted for everything else.
+     * restore and force_delete, not deleted for everything else. Route model binding guarantees the
+     * form; it is only missing when the API docs evaluate these rules outside a request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         $form = $this->route('form');
-
-        if (! $form instanceof Form) {
-            abort(404);
-        }
-
+        $formId = $form instanceof Form ? $form->id : null;
         $actsOnDeletedEntries = in_array($this->input('action'), self::ACTIONS_FOR_DELETED_ENTRIES, true);
 
         return [
@@ -67,7 +64,7 @@ class FormEntryBulkRequest extends FormRequest
                 'string',
                 'distinct',
                 Rule::exists('form_entries', 'id')
-                    ->where('form_id', $form->id)
+                    ->where('form_id', $formId)
                     ->where(fn (Builder $query) => $actsOnDeletedEntries
                         ? $query->whereNotNull('deleted_at')
                         : $query->whereNull('deleted_at')),

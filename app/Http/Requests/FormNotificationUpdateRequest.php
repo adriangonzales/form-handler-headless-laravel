@@ -34,7 +34,7 @@ class FormNotificationUpdateRequest extends FormRequest
             'form_id' => ['prohibited'],
             'type' => ['required', 'in:email,sms'],
             'value' => $this->valueRules(),
-            'enabled' => ['required'],
+            'enabled' => ['required', 'boolean'],
             'error' => ['prohibited'],
         ];
     }

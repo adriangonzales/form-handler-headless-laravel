@@ -22,7 +22,9 @@ class FormEntryStoreRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Get the validation rules that apply to the request: those built from the form's schema. Route
+     * model binding guarantees the form; it is only missing when the API docs evaluate these rules
+     * outside a request, and the fields depend on each form's schema anyway.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -30,10 +32,6 @@ class FormEntryStoreRequest extends FormRequest
     {
         $form = $this->route('form');
 
-        if (! $form instanceof Form) {
-            abort(404);
-        }
-
-        return (new BuildValidationRules)($form);
+        return $form instanceof Form ? (new BuildValidationRules)($form) : [];
     }
 }

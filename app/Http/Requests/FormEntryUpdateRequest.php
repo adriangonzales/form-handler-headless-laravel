@@ -37,10 +37,10 @@ class FormEntryUpdateRequest extends FormRequest
     {
         return [
             ...array_fill_keys(self::SUBMISSION_FIELDS, ['prohibited']),
-            'spam' => ['nullable'],
+            'spam' => ['nullable', 'boolean'],
             'spam_score' => ['sometimes', 'required', 'numeric', 'between:0,9.999'],
             'spam_reason' => ['nullable', 'string'],
-            'starred' => ['sometimes', 'required'],
+            'starred' => ['sometimes', 'required', 'boolean'],
             'read_at' => ['nullable', 'date'],
         ];
     }

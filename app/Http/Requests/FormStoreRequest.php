@@ -38,8 +38,20 @@ class FormStoreRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:400'],
+            /**
+             * Fields keyed by field ID. Each may set a `label`, an input `name` (defaults to the ID) and
+             * Laravel validation `rules` (an array or a comma-separated string).
+             *
+             * @var array<string, array{label?: string, name?: string, rules?: list<string>|string}>|null
+             */
             'schema' => ['nullable', 'array'],
-            ...$this->settingsRules(),
+            /**
+             * Every key is optional and takes its default when omitted. Unknown keys are rejected.
+             *
+             * @var array{redirect?: string|null, timezone?: string|null, domains?: list<string>|null, message?: string|null, honeypot_enabled?: bool, honeypot_name?: string|null}|null
+             */
+            'settings' => $this->settingsRule(),
+            ...$this->settingsFieldRules(),
         ];
     }
 
