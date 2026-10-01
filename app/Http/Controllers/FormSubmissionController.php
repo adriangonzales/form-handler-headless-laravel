@@ -30,11 +30,14 @@ class FormSubmissionController extends Controller
     {
         $settings = $form->settings ?? new FormSettings;
 
+        $spamReason = $settings->honeypotTripped($request->all()) ? 'Honeypot field was filled in.' : null;
+
         $formEntry = $createFormEntry(
             $form,
             $request->validated(),
             $request,
-            $settings->honeypotTripped($request->all()) ? 'Honeypot field was filled in.' : null,
+            $spamReason,
+            awaitsSpamCheck: $spamReason === null,
         );
 
         event(new FormEntrySubmitted($formEntry));

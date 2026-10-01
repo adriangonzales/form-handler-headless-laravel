@@ -25,6 +25,7 @@ return new class extends Migration
             $table->boolean('spam')->nullable();
             $table->decimal('spam_score', 4, 3)->default(0);
             $table->string('spam_reason')->nullable();
+            $table->timestamp('spam_checked_at')->nullable();
             $table->boolean('starred')->default(false);
             $table->timestamp('read_at')->nullable();
             $table->timestamps();

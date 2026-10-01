@@ -78,6 +78,7 @@ it('exports entries as CSV with a column per schema field', function (): void {
         'spam' => false,
         'spam_score' => 0.25,
         'spam_reason' => null,
+        'spam_checked_at' => '2026-01-02 03:04:06',
         'ip' => '127.0.0.1',
         'referer' => 'https://example.com/contact',
         'user_agent' => 'Mozilla/5.0',
@@ -91,8 +92,8 @@ it('exports entries as CSV with a column per schema field', function (): void {
 
     $rows = parseCsv($response->streamedContent());
 
-    expect($rows[0])->toBe(['id', 'created_at', 'Name', 'Email', 'Message', 'read_at', 'starred', 'spam', 'spam_score', 'spam_reason', 'ip', 'referer', 'user_agent', 'deleted_at'])
-        ->and($rows[1])->toBe([$entry->id, '2026-01-02T03:04:05Z', 'Ada Lovelace', 'ada@example.com', "Hello,\n\"world\"", '', 'true', 'false', '0.250', '', '127.0.0.1', 'https://example.com/contact', 'Mozilla/5.0', ''])
+    expect($rows[0])->toBe(['id', 'created_at', 'Name', 'Email', 'Message', 'read_at', 'starred', 'spam', 'spam_score', 'spam_reason', 'spam_checked_at', 'ip', 'referer', 'user_agent', 'deleted_at'])
+        ->and($rows[1])->toBe([$entry->id, '2026-01-02T03:04:05Z', 'Ada Lovelace', 'ada@example.com', "Hello,\n\"world\"", '', 'true', 'false', '0.250', '', '2026-01-02T03:04:06Z', '127.0.0.1', 'https://example.com/contact', 'Mozilla/5.0', ''])
         ->and($rows)->toHaveCount(2);
 });
 
@@ -175,7 +176,7 @@ it('escapes spreadsheet formulas in exported values', function (): void {
     $row = parseCsv($response->streamedContent())[1];
 
     expect($row[2])->toBe('\'=HYPERLINK("https://evil.example","click")')
-        ->and($row[12])->toBe("'@SUM(1+1)");
+        ->and($row[13])->toBe("'@SUM(1+1)");
 });
 
 it('forbids exporting entries of a form the user does not own', function (): void {

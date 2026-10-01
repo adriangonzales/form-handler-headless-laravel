@@ -33,6 +33,7 @@ class FormEntryFactory extends Factory
             'spam' => fake()->boolean(),
             'spam_score' => fake()->randomFloat(2, 0, 1),
             'spam_reason' => fake()->word(),
+            'spam_checked_at' => fake()->dateTime(),
             'starred' => fake()->boolean(),
             'read_at' => fake()->dateTime(),
         ];

@@ -32,6 +32,12 @@ class FormEntryResource extends JsonResource
             'spam' => $this->spam,
             'spam_score' => $this->spam_score,
             'spam_reason' => $this->spam_reason,
+            /**
+             * When the entry's spam check finished: when it was created for honeypot hits and entries
+             * created through the API, or when Jev classified a public submission. `null` while a
+             * submission awaits classification, or if classification was unavailable.
+             */
+            'spam_checked_at' => $this->spam_checked_at,
             'starred' => $this->starred,
             'read_at' => $this->read_at,
             'created_at' => $this->created_at,

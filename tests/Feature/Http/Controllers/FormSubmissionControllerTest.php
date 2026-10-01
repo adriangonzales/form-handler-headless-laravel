@@ -66,6 +66,7 @@ it('responds with a null redirect and message when the form has no settings', fu
 
 it('stores a submission that fills in the honeypot as spam without alerting', function (): void {
     Queue::fake();
+    $this->freezeSecond();
 
     $form = Form::factory()->active()->withBasicSchema()->create([
         'settings' => ['honeypot_enabled' => true, 'honeypot_name' => 'website', 'message' => 'Thanks!'],
@@ -86,6 +87,7 @@ it('stores a submission that fills in the honeypot as spam without alerting', fu
     $entry = $form->entries()->sole();
     expect($entry->spam)->toBeTrue();
     expect($entry->spam_reason)->toBe('Honeypot field was filled in.');
+    expect($entry->spam_checked_at)->toEqual(now());
     expect($entry->input)->not->toHaveKey('website');
     Queue::assertNotPushed(DeliverFormEntryAlert::class);
 });
@@ -98,6 +100,7 @@ it('accepts a submission as not spam when the honeypot is empty or disabled', fu
     $entry = $form->entries()->sole();
     expect($entry->spam)->toBeFalse();
     expect($entry->spam_reason)->toBeNull();
+    expect($entry->spam_checked_at)->toBeNull();
 })->with([
     'honeypot left empty' => [['honeypot_enabled' => true, 'honeypot_name' => 'website'], ['website' => '']],
     'honeypot omitted' => [['honeypot_enabled' => true, 'honeypot_name' => 'website'], []],

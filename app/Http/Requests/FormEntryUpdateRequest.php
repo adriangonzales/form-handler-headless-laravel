@@ -29,26 +29,28 @@ class FormEntryUpdateRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request. Only triage fields are editable, and each is
      * optional so a client can change one without resending the rest. Submission fields are rejected
-     * rather than ignored so clients learn their change was not applied.
+     * rather than ignored, even when sent as null, so clients learn their change was not applied.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            ...array_fill_keys(self::SUBMISSION_FIELDS, ['prohibited']),
+            ...array_fill_keys(self::SUBMISSION_FIELDS, ['missing']),
             /**
              * Recorded at submission time. Rejected if sent.
              *
              * @var array<string, mixed>|null
              */
-            'input' => ['prohibited'],
+            'input' => ['missing'],
             /**
              * Recorded at submission time. Rejected if sent.
              *
              * @var array{platform: string|null, browser: string|null, browser_version: string|null}|null
              */
-            'user_agent_display' => ['prohibited'],
+            'user_agent_display' => ['missing'],
+            /** Recorded by the spam check. Rejected if sent. */
+            'spam_checked_at' => ['missing'],
             'spam' => ['nullable', 'boolean'],
             'spam_score' => ['sometimes', 'required', 'numeric', 'between:0,9.999'],
             'spam_reason' => ['nullable', 'string'],

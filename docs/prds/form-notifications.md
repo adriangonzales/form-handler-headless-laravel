@@ -51,9 +51,9 @@ Responds `201` with the recipient resource.
 
 `value` must match `type`: a valid email address (max 255 characters) for `email`, or an E.164 phone number for `sms` (`+`, a country code not starting with 0, at most 15 digits, no spaces or punctuation, e.g. `+14155552671`). Otherwise the request returns 422 on `value`.
 
-`error` is read-only on create and update (it is reserved for the system to report delivery failures): sending it returns 422 on `error`.
+`error` is read-only on create and update (it is reserved for the system to report delivery failures): sending it, even as `null`, returns 422 on `error`.
 
-**FR-4 Update a recipient.** `PUT/PATCH /api/v1/notifications/{notification}` accepts `type`, `value` and `enabled` (all required, with `value` validated against `type` as in FR-3 and `enabled` a boolean), and returns the refreshed recipient. A recipient cannot be moved to another form: sending `form_id` returns 422 on `form_id` and nothing is changed.
+**FR-4 Update a recipient.** `PUT/PATCH /api/v1/notifications/{notification}` accepts `type`, `value` and `enabled` (all required, with `value` validated against `type` as in FR-3 and `enabled` a boolean), and returns the refreshed recipient. A recipient cannot be moved to another form: sending `form_id`, even as `null`, returns 422 on `form_id` and nothing is changed.
 
 **FR-5 Delete and restore a recipient.** `DELETE /api/v1/notifications/{notification}` soft-deletes the recipient and returns `204`; it no longer appears in the list and returns 404 from show and update. `POST /api/v1/notifications/{notification}/restore` clears `deleted_at` and returns `200` with the recipient resource. There is no permanent delete; recipients are removed permanently only when their owner's account is deleted.
 

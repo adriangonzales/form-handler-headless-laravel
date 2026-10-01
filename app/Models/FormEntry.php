@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * @property array<string, mixed>|null $input
  * @property array{platform: string|null, browser: string|null, browser_version: string|null}|null $user_agent_display
+ * @property CarbonImmutable|null $spam_checked_at
  * @property CarbonImmutable|null $read_at
  */
 #[Fillable([
@@ -27,6 +28,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'spam',
     'spam_score',
     'spam_reason',
+    'spam_checked_at',
     'starred',
     'read_at',
 ])]
@@ -50,6 +52,7 @@ class FormEntry extends Model
             'user_agent_display' => 'array',
             'spam' => 'boolean',
             'spam_score' => 'decimal:3',
+            'spam_checked_at' => 'datetime',
             'starred' => 'boolean',
             'read_at' => 'datetime',
         ];

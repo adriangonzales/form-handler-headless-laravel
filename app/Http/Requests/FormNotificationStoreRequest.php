@@ -33,7 +33,7 @@ class FormNotificationStoreRequest extends FormRequest
             'type' => ['required', 'in:email,sms'],
             'value' => $this->valueRules(),
             'enabled' => ['sometimes', 'boolean'],
-            'error' => ['prohibited'],
+            'error' => ['missing'],
         ];
     }
 }

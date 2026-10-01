@@ -220,6 +220,39 @@ it('rejects a client-supplied error', function (string $method, string $routeNam
     'update' => ['PUT', 'notifications.update', true],
 ]);
 
+it('rejects read-only fields sent as null on update', function (string $field): void {
+    $this->actingAs($this->user);
+
+    $notification = FormNotification::factory()->create(['form_id' => $this->form->id, 'error' => 'Mailbox full']);
+
+    $response = $this->putJson(route('notifications.update', $notification), [
+        'type' => 'email',
+        'value' => 'alerts@example.com',
+        'enabled' => true,
+        $field => null,
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors($field);
+
+    expect($notification->fresh())
+        ->form_id->toBe($this->form->id)
+        ->error->toBe('Mailbox full');
+})->with(['form_id', 'error']);
+
+it('rejects an error sent as null on create', function (): void {
+    $this->actingAs($this->user);
+
+    $response = $this->postJson(route('forms.notifications.store', $this->form), [
+        'type' => 'email',
+        'value' => 'alerts@example.com',
+        'error' => null,
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors('error');
+});
+
 it('validates the value according to the type', function (string $method, string $routeName, bool $existing, string $type, string $value, bool $valid): void {
     $this->actingAs($this->user);
 

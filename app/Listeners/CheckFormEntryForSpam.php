@@ -31,8 +31,9 @@ class CheckFormEntryForSpam implements ShouldQueue
 
     /**
      * Ask Jev whether an entry not already flagged as spam is spam, store the verdict and its
-     * probability, then announce that the spam check is done. Without a TypeSafe API key, or when
-     * the call fails, the entry is left as submitted so its alerts are still sent.
+     * probability with the time it was checked, then announce that the spam check is done. Without a
+     * TypeSafe API key, or when the call fails, the entry is left as submitted, with no
+     * `spam_checked_at`, so its alerts are still sent.
      */
     public function handle(FormEntrySubmitted $event): void
     {
@@ -86,6 +87,7 @@ class CheckFormEntryForSpam implements ShouldQueue
             'spam' => $isSpam,
             'spam_score' => round($answer->probability, 2),
             'spam_reason' => $isSpam ? self::REASON : null,
+            'spam_checked_at' => now(),
         ]);
     }
 }

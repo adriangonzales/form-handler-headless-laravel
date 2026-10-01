@@ -48,6 +48,8 @@ it('lists results from the index', function (): void {
                 'spam',
                 'spam_score',
                 'spam_reason',
+                'spam_checked_at',
+                'spam_checked_at',
                 'starred',
                 'read_at',
                 'created_at',
@@ -120,6 +122,7 @@ it('creates a new form entry', function (): void {
     $name = fake()->name();
 
     Event::fake();
+    $this->travelTo('2026-01-02 03:04:05');
 
     $response = $this->post(route('forms.entries.store', $this->form), [
         'name' => $name,
@@ -138,6 +141,7 @@ it('creates a new form entry', function (): void {
             'spam' => false,
             'spam_score' => '0.000',
             'spam_reason' => null,
+            'spam_checked_at' => '2026-01-02T03:04:05.000000Z',
             'starred' => false,
             'read_at' => null,
         ],
@@ -602,6 +606,13 @@ it('rejects changes to submission fields on update', function (string $field, mi
     'referer' => ['referer', 'https://edited.example'],
     'user_agent' => ['user_agent', 'Edited'],
     'user_agent_display' => ['user_agent_display', ['platform' => 'Edited', 'browser' => null, 'browser_version' => null]],
+    'spam_checked_at' => ['spam_checked_at', null],
+    'null input' => ['input', null],
+    'null ip' => ['ip', null],
+    'null ip_location_display' => ['ip_location_display', null],
+    'null referer' => ['referer', null],
+    'null user_agent' => ['user_agent', null],
+    'null user_agent_display' => ['user_agent_display', null],
 ]);
 
 it('forbids updating an entry on a form the user does not own', function (): void {
