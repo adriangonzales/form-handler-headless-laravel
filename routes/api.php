@@ -39,6 +39,10 @@ Route::prefix('v1')->group(function () {
         ->middleware(['throttle:300,1', 'throttle:form-submissions'])
         ->name('forms.submissions.store');
 
+    Route::get('entry-exports/{export}/download', [FormEntryExportController::class, 'download'])
+        ->middleware('signed:relative')
+        ->name('entry-exports.download');
+
     Route::middleware(['auth:api', 'token.current'])->group(function () {
         Route::apiResource('forms', FormController::class)->only('index', 'show', 'store', 'update', 'destroy');
         Route::post('forms/{form}/restore', [FormController::class, 'restore'])
@@ -50,8 +54,6 @@ Route::prefix('v1')->group(function () {
             ->name('forms.entries.exports.store');
         Route::get('entry-exports/{export}', [FormEntryExportController::class, 'show'])
             ->name('entry-exports.show');
-        Route::get('entry-exports/{export}/download', [FormEntryExportController::class, 'download'])
-            ->name('entry-exports.download');
         Route::post('forms/{form}/entries/bulk', [FormEntryController::class, 'bulk'])
             ->name('forms.entries.bulk');
         Route::apiResource('forms.entries', FormEntryController::class)

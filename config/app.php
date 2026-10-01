@@ -123,4 +123,17 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Entry Export Download Links
+    |--------------------------------------------------------------------------
+    |
+    | Export download links are temporary signed URLs, so a client can hand
+    | them to a browser without the API token. This sets how many minutes
+    | a link stays valid after it appears in an export response.
+    |
+    */
+
+    'export_download_url_ttl' => (int) env('EXPORT_DOWNLOAD_URL_TTL', 5),
+
 ];
