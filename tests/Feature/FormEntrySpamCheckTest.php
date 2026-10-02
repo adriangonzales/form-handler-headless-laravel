@@ -85,9 +85,11 @@ it('does not classify an entry already flagged as spam', function (): void {
     Queue::assertNotPushed(DeliverFormEntryAlert::class);
 });
 
-it('leaves the entry as submitted and still alerts when classification is unavailable', function (Closure $setUp): void {
+it('leaves the entry as submitted and still alerts when classification is unavailable due to missing API key', function (): void {
     Queue::fake([DeliverFormEntryAlert::class]);
-    $setUp();
+    config(['ai.providers.typesafe.key' => null]);
+    Classification::fake();
+
     $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'spam' => false, 'spam_score' => 0, 'spam_reason' => null, 'spam_checked_at' => null]);
 
     event(new FormEntrySubmitted($entry));
@@ -98,16 +100,7 @@ it('leaves the entry as submitted and still alerts when classification is unavai
         ->spam_reason->toBeNull()
         ->spam_checked_at->toBeNull();
     Queue::assertPushed(DeliverFormEntryAlert::class, 1);
-})->with([
-    'no API key' => fn (): Closure => function (): void {
-        config(['ai.providers.typesafe.key' => null]);
-        Classification::fake();
-    },
-    'request fails' => fn (): Closure => function (): void {
-        Log::spy();
-        Classification::fake(fn () => throw new RuntimeException('Connection timed out'));
-    },
-]);
+});
 
 it('logs a failed classification', function (): void {
     Queue::fake([DeliverFormEntryAlert::class]);
