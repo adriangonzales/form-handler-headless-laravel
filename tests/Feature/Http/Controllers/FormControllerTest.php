@@ -136,7 +136,7 @@ it('creates a new form', function (): void {
     ]);
 
     $response->assertCreated();
-    $response->assertJsonStructure([]);
+    $response->assertJsonPath('data.active', false);
 
     $forms = $user->forms()
         ->where('name', $name)

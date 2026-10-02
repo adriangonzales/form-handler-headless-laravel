@@ -32,6 +32,15 @@ class Form extends Model
     use SoftDeletes;
 
     /**
+     * The model's default values for attributes, mirroring the database defaults.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'active' => false,
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
