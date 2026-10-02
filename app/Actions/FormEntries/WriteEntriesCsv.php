@@ -19,8 +19,9 @@ class WriteEntriesCsv
     private const array FORMULA_TRIGGERS = ['=', '+', '-', '@', "\t", "\r"];
 
     /**
-     * Write the entries as CSV: a column per schema field (headed by its label), a column per input key
-     * the schema no longer has (headed by the key), then submission metadata. Returns the number of entries written.
+     * Write the entries as CSV: a column per schema field in the schema's order (headed by its label), a
+     * column per input key the schema no longer has (headed by the key), then submission metadata. Returns
+     * the number of entries written.
      *
      * @param  Builder<FormEntry>  $entries
      * @param  resource  $handle
@@ -32,8 +33,8 @@ class WriteEntriesCsv
         /** @var array<string, string> $fields input key => column heading */
         $fields = [];
 
-        foreach ($form->schema ?? [] as $fieldKey => $fieldSettings) {
-            $inputKey = $fieldSettings['name'] ?? $fieldKey;
+        foreach ($form->orderedSchema() as $fieldSettings) {
+            $inputKey = $fieldSettings['name'] ?? $fieldSettings['id'];
             $fields[$inputKey] = $fieldSettings['label'] ?? $inputKey;
         }
 

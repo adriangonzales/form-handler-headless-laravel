@@ -8,8 +8,8 @@ use Illuminate\Support\Arr;
 class MapFormData
 {
     /**
-     * Pair each schema field's label with the submitted value. Values are stored under the field's
-     * "name" when it has one, otherwise under its schema key (see BuildValidationRules).
+     * Pair each schema field's label with the submitted value, keyed by field ID in the schema's order.
+     * Values are stored under the field's "name" when it has one, otherwise under its ID (see BuildValidationRules).
      *
      * @return array<string, array{label: string, data: mixed}>
      */
@@ -19,7 +19,9 @@ class MapFormData
 
         $data = [];
 
-        foreach ($formEntry->form->schema ?? [] as $fieldId => $fieldSettings) {
+        foreach ($formEntry->form->orderedSchema() as $fieldSettings) {
+            $fieldId = $fieldSettings['id'];
+
             $data[$fieldId] = [
                 'label' => $fieldSettings['label'] ?? $fieldId,
                 'data' => Arr::get($formEntry->input ?? [], $fieldSettings['name'] ?? $fieldId),

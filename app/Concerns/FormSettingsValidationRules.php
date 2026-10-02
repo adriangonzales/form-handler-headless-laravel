@@ -125,9 +125,16 @@ trait FormSettingsValidationRules
     {
         $inputNames = [];
 
-        foreach ($schema as $fieldId => $field) {
-            $name = is_array($field) ? ($field['name'] ?? null) : null;
-            $inputNames[] = is_string($name) ? $name : (string) $fieldId;
+        foreach ($schema as $field) {
+            if (! is_array($field)) {
+                continue;
+            }
+
+            $inputName = $field['name'] ?? $field['id'] ?? null;
+
+            if (is_string($inputName)) {
+                $inputNames[] = $inputName;
+            }
         }
 
         return $inputNames;

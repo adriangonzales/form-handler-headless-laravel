@@ -13,15 +13,21 @@ it('produces no validation rules from an empty schema', function (): void {
 
 it('produces validation rules from a basic schema', function (): void {
     $schema = [
-        Str::ulid()->toString() => [
+        [
+            'id' => Str::ulid()->toString(),
+            'order' => 1,
             'label' => 'Name',
             'rules' => ['required'],
         ],
-        Str::ulid()->toString() => [
+        [
+            'id' => Str::ulid()->toString(),
+            'order' => 2,
             'label' => 'Email',
             'rules' => ['required', 'email'],
         ],
-        Str::ulid()->toString() => [
+        [
+            'id' => Str::ulid()->toString(),
+            'order' => 3,
             'label' => 'Message',
             'rules' => ['required'],
         ],
@@ -31,7 +37,7 @@ it('produces validation rules from a basic schema', function (): void {
 
     $result = (new BuildValidationRules)($form);
 
-    $schemaFieldIds = array_keys($schema);
+    $schemaFieldIds = array_column($schema, 'id');
 
     $expectedSchema = [
         $schemaFieldIds[0] => [
@@ -51,15 +57,21 @@ it('produces validation rules from a basic schema', function (): void {
 
 it('produces validation rules from a comma delimited schema', function (): void {
     $schema = [
-        Str::ulid()->toString() => [
+        [
+            'id' => Str::ulid()->toString(),
+            'order' => 1,
             'label' => 'Name',
             'rules' => 'required',
         ],
-        Str::ulid()->toString() => [
+        [
+            'id' => Str::ulid()->toString(),
+            'order' => 2,
             'label' => 'Email',
             'rules' => 'required,email',
         ],
-        Str::ulid()->toString() => [
+        [
+            'id' => Str::ulid()->toString(),
+            'order' => 3,
             'label' => 'Message',
             'rules' => 'required',
         ],
@@ -69,7 +81,7 @@ it('produces validation rules from a comma delimited schema', function (): void 
 
     $result = (new BuildValidationRules)($form);
 
-    $schemaFieldIds = array_keys($schema);
+    $schemaFieldIds = array_column($schema, 'id');
 
     $expectedSchema = [
         $schemaFieldIds[0] => [

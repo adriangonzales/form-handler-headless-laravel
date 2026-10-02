@@ -198,7 +198,7 @@ it('records the referer of a submission', function (?string $referer, ?string $e
 it('stores only validated schema fields as input', function (): void {
     $this->actingAs($this->user);
     $form = Form::factory()->active()->withBasicSchema()->create(['user_id' => $this->user->id]);
-    [$nameField, $emailField, $messageField] = array_keys($form->schema);
+    [$nameField, $emailField, $messageField] = array_column($form->schema, 'id');
 
     $response = $this->postJson(route('forms.entries.store', $form), [
         $nameField => 'Ada Lovelace',

@@ -45,12 +45,20 @@ class FormUpdateRequest extends FormRequest
             'name' => ['required', 'string', 'max:400'],
             'active' => ['required', 'boolean'],
             /**
-             * Fields keyed by field ID. Each may set a `label`, an input `name` (defaults to the ID) and
-             * Laravel validation `rules` (an array or a comma-separated string).
+             * A list of fields. Each has a unique ULID `id` and an integer `order` used to sort fields for
+             * display, and may set a `label`, an input `name` (defaults to the ID) and Laravel validation
+             * `rules` (an array or a comma-separated string). Other keys are rejected.
              *
-             * @var array<string, array{label?: string, name?: string, rules?: list<string>|string}>|null
+             * @var list<array{id: string, order: int, label?: string, name?: string, rules?: list<string>|string}>|null
              */
-            'schema' => ['nullable', 'array'],
+            'schema' => ['nullable', 'list'],
+            'schema.*' => ['array:id,order,label,name,rules'],
+            'schema.*.id' => ['required', 'ulid', 'distinct'],
+            'schema.*.order' => ['required', 'integer'],
+            'schema.*.label' => ['nullable', 'string'],
+            'schema.*.name' => ['nullable', 'string'],
+            'schema.*.rules' => ['nullable'],
+            'schema.*.rules.*' => ['string'],
             /**
              * Every key is optional and takes its default when omitted. Unknown keys are rejected.
              *

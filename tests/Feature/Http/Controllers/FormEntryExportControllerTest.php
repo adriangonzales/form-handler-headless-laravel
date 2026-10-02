@@ -12,6 +12,7 @@ use Closure;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use RuntimeException;
 
@@ -67,7 +68,7 @@ beforeEach(function (): void {
 it('exports entries as CSV with a column per schema field', function (): void {
     $this->actingAs($this->user);
     $form = Form::factory()->withBasicSchema()->create(['user_id' => $this->user->id, 'name' => 'Contact Us']);
-    [$nameField, $emailField, $messageField] = array_keys($form->schema);
+    [$nameField, $emailField, $messageField] = array_column($form->schema, 'id');
 
     $this->travelTo('2026-01-02 03:04:05');
     $entry = FormEntry::factory()->create([
@@ -102,8 +103,8 @@ it('exports values stored under fields the schema no longer has', function (): v
     $form = Form::factory()->create([
         'user_id' => $this->user->id,
         'schema' => [
-            'email' => ['label' => 'Email', 'rules' => ['required']],
-            'field_2' => ['name' => 'phone_number', 'label' => 'Phone', 'rules' => ['sometimes']],
+            ['id' => 'email', 'order' => 1, 'label' => 'Email', 'rules' => ['required']],
+            ['id' => 'field_2', 'order' => 2, 'name' => 'phone_number', 'label' => 'Phone', 'rules' => ['sometimes']],
         ],
     ]);
 
@@ -160,10 +161,31 @@ it('applies index filters and sort to the export', function (): void {
     expect($ids)->toBe([$newer->id, $older->id]);
 });
 
+it("orders schema columns by each field's order", function (): void {
+    $this->actingAs($this->user);
+    $form = Form::factory()->create([
+        'user_id' => $this->user->id,
+        'schema' => [
+            ['id' => (string) Str::ulid(), 'order' => 3, 'name' => 'message', 'label' => 'Message'],
+            ['id' => (string) Str::ulid(), 'order' => 1, 'name' => 'name', 'label' => 'Name'],
+            ['id' => (string) Str::ulid(), 'order' => 2, 'name' => 'email', 'label' => 'Email'],
+        ],
+    ]);
+    FormEntry::factory()->create([
+        'form_id' => $form->id,
+        'input' => ['message' => 'Hello', 'name' => 'Ada', 'email' => 'ada@example.com'],
+    ]);
+
+    $rows = parseCsv(requestExport($form)->streamedContent());
+
+    expect(array_slice($rows[0], 2, 3))->toBe(['Name', 'Email', 'Message'])
+        ->and(array_slice($rows[1], 2, 3))->toBe(['Ada', 'ada@example.com', 'Hello']);
+});
+
 it('escapes spreadsheet formulas in exported values', function (): void {
     $this->actingAs($this->user);
     $form = Form::factory()->withBasicSchema()->create(['user_id' => $this->user->id]);
-    [$nameField] = array_keys($form->schema);
+    [$nameField] = array_column($form->schema, 'id');
 
     FormEntry::factory()->create([
         'form_id' => $form->id,

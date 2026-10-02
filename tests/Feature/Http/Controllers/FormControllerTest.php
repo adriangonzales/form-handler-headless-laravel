@@ -117,9 +117,12 @@ it('creates a new form', function (): void {
 
     $name = fake()->name();
     $schema = [
-        'email' => [
+        [
+            'id' => '01K6E2E0000000000000000001',
+            'order' => 1,
             'label' => 'Email',
-            'rules' => ['required', 'email'],
+            'name' => 'email',
+            'rules' => ['email', 'required'],
         ],
     ];
     $settings = ['redirect' => fake()->url()];
@@ -161,11 +164,53 @@ it('rejects a JSON string schema when creating a form', function (): void {
 
     $response = $this->postJson(route('forms.store'), [
         'name' => fake()->name(),
-        'schema' => json_encode(['email' => ['label' => 'Email']]),
+        'schema' => json_encode([['id' => '01K6E2E0000000000000000001', 'order' => 1, 'label' => 'Email']]),
     ]);
 
     $response->assertUnprocessable();
     $response->assertJsonValidationErrors('schema');
+});
+
+it('rejects an invalid schema when creating a form', function (mixed $schema, string $errorKey): void {
+    $this->actingAs(User::factory()->create());
+
+    $response = $this->postJson(route('forms.store'), [
+        'name' => fake()->name(),
+        'schema' => $schema,
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors($errorKey);
+})->with([
+    'keyed by field ID' => [['01K6E2E0000000000000000001' => ['order' => 1, 'label' => 'Email']], 'schema'],
+    'missing ID' => [[['order' => 1, 'label' => 'Email']], 'schema.0.id'],
+    'non-ULID ID' => [[['id' => 'email', 'order' => 1]], 'schema.0.id'],
+    'duplicate ID' => [[['id' => '01K6E2E0000000000000000001', 'order' => 1], ['id' => '01K6E2E0000000000000000001', 'order' => 2]], 'schema.1.id'],
+    'missing order' => [[['id' => '01K6E2E0000000000000000001', 'label' => 'Email']], 'schema.0.order'],
+    'non-integer order' => [[['id' => '01K6E2E0000000000000000001', 'order' => 'first']], 'schema.0.order'],
+    'unknown field key' => [[['id' => '01K6E2E0000000000000000001', 'order' => 1, 'type' => 'text']], 'schema.0'],
+    'non-string rule' => [[['id' => '01K6E2E0000000000000000001', 'order' => 1, 'rules' => [['required']]]], 'schema.0.rules.0'],
+]);
+
+it('returns schema fields sorted by order', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $form = Form::factory()->create([
+        'user_id' => $user->id,
+        'schema' => [
+            ['id' => '01m3x339mch98t20fnxabkq1xs', 'order' => 2, 'label' => 'Email', 'name' => 'email'],
+            ['id' => '01K6E2E0000000000000000001', 'order' => 1, 'label' => 'Name', 'name' => 'name'],
+        ],
+    ]);
+
+    $response = $this->getJson(route('forms.show', $form));
+
+    $response->assertOk();
+
+    expect($response->json('data.schema'))->toBe([
+        ['id' => '01K6E2E0000000000000000001', 'order' => 1, 'label' => 'Name', 'name' => 'name'],
+        ['id' => '01m3x339mch98t20fnxabkq1xs', 'order' => 2, 'label' => 'Email', 'name' => 'email'],
+    ]);
 });
 
 it('updates a form', function (): void {
@@ -456,20 +501,20 @@ it('keeps the stored honeypot name when settings are updated without one', funct
     expect($form->fresh()->settings->honeypot_name)->toBe('website_abc123');
 });
 
-it('rejects a honeypot name that matches a schema field when creating a form', function (array $schema): void {
+it('rejects a honeypot name that matches a schema field when creating a form', function (array $schema, string $honeypotName): void {
     $this->actingAs(User::factory()->create());
 
     $response = $this->postJson(route('forms.store'), [
         'name' => fake()->name(),
         'schema' => $schema,
-        'settings' => ['honeypot_enabled' => true, 'honeypot_name' => 'website'],
+        'settings' => ['honeypot_enabled' => true, 'honeypot_name' => $honeypotName],
     ]);
 
     $response->assertUnprocessable();
     $response->assertJsonValidationErrors(['settings.honeypot_name' => 'The honeypot name must not match a schema field.']);
 })->with([
-    'field ID' => [['website' => ['label' => 'Website']]],
-    'field name override' => [['field_1' => ['name' => 'website', 'label' => 'Website']]],
+    'field ID' => [[['id' => '01K6E2E0000000000000000001', 'order' => 1, 'label' => 'Website']], '01K6E2E0000000000000000001'],
+    'field name override' => [[['id' => '01K6E2E0000000000000000001', 'order' => 1, 'name' => 'website', 'label' => 'Website']], 'website'],
 ]);
 
 it('accepts a honeypot name that only matches an overridden field ID', function (): void {
@@ -477,8 +522,8 @@ it('accepts a honeypot name that only matches an overridden field ID', function 
 
     $response = $this->postJson(route('forms.store'), [
         'name' => fake()->name(),
-        'schema' => ['website' => ['name' => 'url', 'label' => 'Website']],
-        'settings' => ['honeypot_enabled' => true, 'honeypot_name' => 'website'],
+        'schema' => [['id' => '01K6E2E0000000000000000001', 'order' => 1, 'name' => 'url', 'label' => 'Website']],
+        'settings' => ['honeypot_enabled' => true, 'honeypot_name' => '01K6E2E0000000000000000001'],
     ]);
 
     $response->assertCreated();
@@ -500,13 +545,13 @@ it('checks the honeypot name against the stored schema or settings when updating
     $response->assertJsonValidationErrors($errorKey);
 })->with([
     'new settings clash with stored schema' => [
-        ['schema' => ['website' => ['label' => 'Website']]],
+        ['schema' => [['id' => '01K6E2E0000000000000000001', 'order' => 1, 'name' => 'website', 'label' => 'Website']]],
         ['settings' => ['honeypot_enabled' => true, 'honeypot_name' => 'website']],
         'settings.honeypot_name',
     ],
     'new schema clashes with stored settings' => [
         ['settings' => ['honeypot_enabled' => true, 'honeypot_name' => 'website']],
-        ['schema' => ['website' => ['label' => 'Website']]],
+        ['schema' => [['id' => '01K6E2E0000000000000000001', 'order' => 1, 'name' => 'website', 'label' => 'Website']]],
         'schema',
     ],
 ]);

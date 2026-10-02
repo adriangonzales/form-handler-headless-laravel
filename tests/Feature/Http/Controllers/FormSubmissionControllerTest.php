@@ -19,7 +19,7 @@ it('accepts a submission without authentication and responds with the redirect a
             'domains' => ['example.com'],
         ],
     ]);
-    [$nameField, $emailField, $messageField] = array_keys($form->schema);
+    [$nameField, $emailField, $messageField] = array_column($form->schema, 'id');
 
     $response = $this->withHeaders(['Referer' => 'https://example.com/contact'])
         ->postJson(route('forms.submissions.store', $form), [
@@ -72,7 +72,7 @@ it('stores a submission that fills in the honeypot as spam without alerting', fu
         'settings' => ['honeypot_enabled' => true, 'honeypot_name' => 'website', 'message' => 'Thanks!'],
     ]);
     FormNotification::factory()->create(['form_id' => $form->id, 'type' => 'email', 'enabled' => true]);
-    [$nameField, $emailField, $messageField] = array_keys($form->schema);
+    [$nameField, $emailField, $messageField] = array_column($form->schema, 'id');
 
     $response = $this->postJson(route('forms.submissions.store', $form), [
         $nameField => 'Bot',
@@ -109,14 +109,14 @@ it('accepts a submission as not spam when the honeypot is empty or disabled', fu
 
 it('validates a submission against the form schema', function (): void {
     $form = Form::factory()->active()->withBasicSchema()->create();
-    [, $emailField] = array_keys($form->schema);
+    [, $emailField] = array_column($form->schema, 'id');
 
     $response = $this->postJson(route('forms.submissions.store', $form), [
         $emailField => 'not an email',
     ]);
 
     $response->assertUnprocessable();
-    $response->assertJsonValidationErrors(array_keys($form->schema));
+    $response->assertJsonValidationErrors(array_column($form->schema, 'id'));
 
     expect($form->entries()->count())->toBe(0);
 });

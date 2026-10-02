@@ -19,8 +19,8 @@ beforeEach(function (): void {
         'user_id' => $this->user->id,
         'name' => 'Contact Us',
         'schema' => [
-            'field_1' => ['label' => 'Name', 'rules' => ['required']],
-            'field_2' => ['name' => 'message', 'label' => 'Message', 'rules' => ['required']],
+            ['id' => 'field_1', 'order' => 1, 'label' => 'Name', 'rules' => ['required']],
+            ['id' => 'field_2', 'order' => 2, 'name' => 'message', 'label' => 'Message', 'rules' => ['required']],
         ],
     ]);
 });

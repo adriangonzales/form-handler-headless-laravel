@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * @property array<string, array{label?: string, name?: string, rules?: list<string>|string}>|null $schema
+ * @property list<array{id: string, order: int, label?: string, name?: string, rules?: list<string>|string}>|null $schema
  * @property FormSettings|null $settings
  */
 #[Fillable([
@@ -43,6 +43,19 @@ class Form extends Model
             'schema' => 'array',
             'settings' => FormSettings::class,
         ];
+    }
+
+    /**
+     * Get the schema's fields sorted by their `order`, for display.
+     *
+     * @return array<int, array{id: string, order: int, label?: string, name?: string, rules?: list<string>|string}>
+     */
+    public function orderedSchema(): array
+    {
+        return collect($this->schema ?? [])
+            ->sortBy('order')
+            ->values()
+            ->all();
     }
 
     /**

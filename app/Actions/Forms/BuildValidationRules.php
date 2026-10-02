@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 class BuildValidationRules
 {
     /**
-     * Build validation rules from the form's schema, keyed by field name.
+     * Build validation rules from the form's schema, keyed by each field's input name (its `name`, or its ID).
      *
      * @return array<string, list<string>>
      */
@@ -18,14 +18,14 @@ class BuildValidationRules
     {
         $rules = [];
 
-        foreach ($form->schema ?? [] as $fieldName => $fieldSettings) {
+        foreach ($form->schema ?? [] as $fieldSettings) {
             $fieldRules = $fieldSettings['rules'] ?? ['sometimes'];
 
             if (is_string($fieldRules)) {
                 $fieldRules = explode(',', $fieldRules);
             }
 
-            $rules[$fieldSettings['name'] ?? $fieldName] = $fieldRules;
+            $rules[$fieldSettings['name'] ?? $fieldSettings['id']] = $fieldRules;
         }
 
         return $rules;

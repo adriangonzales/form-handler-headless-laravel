@@ -90,15 +90,21 @@ class FormFactory extends Factory
         return $this->state(function (array $attributes) {
             return [
                 'schema' => [
-                    Str::ulid()->toString() => [
+                    [
+                        'id' => Str::ulid()->toString(),
+                        'order' => 1,
                         'label' => 'Name',
                         'rules' => ['required'],
                     ],
-                    Str::ulid()->toString() => [
+                    [
+                        'id' => Str::ulid()->toString(),
+                        'order' => 2,
                         'label' => 'Email',
                         'rules' => ['required', 'email'],
                     ],
-                    Str::ulid()->toString() => [
+                    [
+                        'id' => Str::ulid()->toString(),
+                        'order' => 3,
                         'label' => 'Message',
                         'rules' => ['required'],
                     ],

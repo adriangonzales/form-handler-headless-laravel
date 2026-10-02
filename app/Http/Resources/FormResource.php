@@ -25,7 +25,12 @@ class FormResource extends JsonResource
             'user_id' => $this->user_id,
             'name' => $this->name,
             'active' => $this->active,
-            'schema' => $this->schema,
+            /**
+             * Fields sorted by `order`.
+             *
+             * @var list<array{id: string, order: int, label?: string, name?: string, rules?: list<string>|string}>|null
+             */
+            'schema' => $this->schema === null ? null : $this->orderedSchema(),
             /** @var array{redirect: string|null, timezone: string|null, domains: list<string>|null, message: string|null, honeypot_enabled: bool, honeypot_name: string|null}|null */
             'settings' => $this->settings,
             /** Entries on the form, excluding spam and deleted ones. Included in the form list only. */
