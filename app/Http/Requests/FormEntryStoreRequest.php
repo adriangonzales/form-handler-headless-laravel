@@ -14,11 +14,19 @@ use Illuminate\Support\Facades\Gate;
 class FormEntryStoreRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Determine if the user is authorized to make this request: only the form's owner may add entries
+     * through the authenticated API, and only while the form is accepting submissions.
      */
     public function authorize(): Response
     {
-        return Gate::inspect('submit', $this->route('form'));
+        $form = $this->route('form');
+        $ownsForm = Gate::inspect('update', $form);
+
+        if ($ownsForm->denied()) {
+            return $ownsForm;
+        }
+
+        return Gate::inspect('submit', $form);
     }
 
     /**

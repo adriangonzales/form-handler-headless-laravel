@@ -441,6 +441,20 @@ it('rejects an invalid entry sort or filter', function (array $query, string $er
     'non-integer page size' => [['per_page' => 'all'], 'per_page'],
 ]);
 
+it('forbids creating an entry on a form the user does not own', function (): void {
+    $this->actingAs(User::factory()->create());
+    $form = Form::factory()->active()->withBasicSchema()->create(['user_id' => $this->user->id]);
+
+    Event::fake();
+
+    $response = $this->postJson(route('forms.entries.store', $form), []);
+
+    $response->assertForbidden();
+    $response->assertJson(['message' => 'You do not own this form.']);
+    $this->assertSame(0, $form->entries()->count());
+    Event::assertNotDispatched(FormEntryCreated::class);
+});
+
 it('forbids listing entries for a form the user does not own', function (): void {
     $this->actingAs(User::factory()->create());
 

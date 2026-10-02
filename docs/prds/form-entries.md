@@ -43,7 +43,8 @@ Table `form_entries`:
 
 **FR-1 Submit an entry.** `POST /api/v1/forms/{form}/entries` (JWT-authenticated).
 
-- The form must be active; otherwise the request is rejected with `403 {"message":"This form is not accepting submissions."}` before validation.
+- Only the form's owner may submit through this endpoint; anyone else receives `403 {"message":"You do not own this form."}`.
+- The form must be active; otherwise the request is rejected with `403 {"message":"This form is not accepting submissions."}`. Both checks run before validation.
 - Request fields are validated with the rules built from the form's schema (see [Forms FR-5](forms.md)). Failures return 422 with per-field errors.
 - Only validated fields are stored in `input`; unknown fields are silently dropped. A form with an empty schema stores `input: []`.
 - Metadata captured: `ip`, `referer`, `user_agent`. `spam` is set to `false` and `spam_score` to `0`. Entries created through this endpoint are not checked for spam, so `spam_checked_at` is set to the creation time.
@@ -72,7 +73,7 @@ The entry is created by the `App\Actions\FormEntries\CreateFormEntry` action, sh
 
 **FR-3 Show an entry.** `GET /api/v1/entries/{entry}` (shallow route).
 
-Every endpoint below except submission is restricted to the owner of the entry's form; anyone else receives `403 {"message":"You do not own this form."}`. Entries of a deleted form are inaccessible (403) until the form is restored.
+Every endpoint in this PRD except the public submission (FR-1a) and the signed export download (FR-8) is restricted to the owner of the entry's form; anyone else receives `403 {"message":"You do not own this form."}`. Entries of a deleted form are inaccessible (403) until the form is restored.
 
 **FR-4 Update an entry.** `PUT/PATCH /api/v1/entries/{entry}` accepts:
 
@@ -128,4 +129,4 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 1. Should public submissions have stronger authentication than form ID plus `Referer` (per-form public key, signed requests)?
 2. Should entries record which schema version they were validated against, given schemas can change?
 3. Should spam-flagged entries be stored, quarantined, or discarded?
-4. Should the authenticated `POST /api/v1/forms/{form}/entries` (FR-1) be kept now that FR-1a exists?
+4. Should the owner-only authenticated `POST /api/v1/forms/{form}/entries` (FR-1) be kept now that FR-1a exists?

@@ -1,6 +1,6 @@
 # Product Requirements — Headless Form Handler
 
-These documents describe the system **as it is currently built** (as of 2026-09-29, commit `5649639`). They are descriptive, not aspirational: each PRD records what the product does today, and calls out known gaps, bugs, and open questions separately so they can be turned into future work.
+These documents describe the system **as it is currently built** (as of 2026-10-01). They are descriptive, not aspirational: each PRD records what the product does today, and calls out known gaps, bugs, and open questions separately so they can be turned into future work.
 
 ## Product summary
 
@@ -28,7 +28,7 @@ User (account holder)
 
 - **Stack:** Laravel 13, PHP 8.4, `tymon/jwt-auth` (API auth), `spatie/laravel-data` (settings), Pest (tests).
 - **Identifiers:** Forms, entries and notifications use ULIDs. Users use auto-increment integers.
-- **Deletion:** All three form-domain tables support soft deletes. Forms can be deleted and restored through the API; entries and notifications cannot.
+- **Deletion:** All three form-domain tables support soft deletes. Forms, entries and notifications can be deleted and restored through the API; only entries can be permanently deleted.
 - **API base path:** `/api/v1`. Everything except `auth/login`, `auth/refresh`, the password reset and webhook endpoints, and public submissions (`POST forms/{form}/submissions`) requires a JWT bearer token (`auth:api`).
 - **Scaffolding source:** The domain was generated from `draft.yaml` (Laravel Blueprint) and then hand-edited; the YAML is no longer an exact match for the code.
 
@@ -38,14 +38,14 @@ User (account holder)
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
 | Form CRUD (list, show, create, update, delete, restore, duplicate) | Built                                                                                                                          |
 | Schema-driven submission validation                                | Built                                                                                                                          |
-| Entry list / show / update                                         | Built, not scoped to owner                                                                                                     |
+| Entry list / show / update / delete / bulk actions / CSV export    | Built                                                                                                                          |
 | Public (unauthenticated) submissions                               | Built. Restricted by `settings.domains` via `Referer`, rate limited, optional honeypot; no CAPTCHA                             |
-| Ownership authorization                                            | Enforced on every form endpoint (list, show, update, delete, restore, duplicate). **Not enforced** on entries or notifications |
-| Notifications on new entry                                         | **Not built.** Recipients can be stored; nothing is sent                                                                       |
-| Spam detection, IP geolocation, UA parsing                         | UA parsing built. Honeypot only for spam; no IP geolocation                                                                    |
-| Delete / restore / duplicate via API                               | Built for forms. Not built for entries or notifications                                                                        |
+| Ownership authorization                                            | Enforced on every authenticated form, entry, notification and export endpoint                                                  |
+| Notifications on new entry                                         | Email alerts built, with Postmark bounce recording. SMS **not built**                                                          |
+| Spam detection, IP geolocation, UA parsing                         | UA parsing built. Honeypot and Jev classification for spam; no CAPTCHA, no IP geolocation                                      |
+| Delete / restore via API                                           | Built for forms, entries (plus permanent delete) and notifications. Duplicate built for forms                                  |
 | Authentication                                                     | Built: JWT login, refresh, logout, current user                                                                                |
-| Account management (registration, password reset, profile)         | **Not built.** Accounts are created by an operator                                                                             |
+| Account management (password reset, profile, account deletion)    | Built. No self-service registration: accounts are created by an operator                                                       |
 | Web interface                                                      | None. Headless by design                                                                                                       |
 
 ## Conventions used in these PRDs
