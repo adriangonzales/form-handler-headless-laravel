@@ -45,7 +45,7 @@ it('flags an entry Jev is confident is spam and does not alert for it', function
 
     expect($entry->fresh())
         ->spam->toBeTrue()
-        ->spam_score->toEqual('0.950')
+        ->spam_score->toBe(0.95)
         ->spam_reason->toBe(CheckFormEntryForSpam::REASON)
         ->spam_checked_at->toEqual(now());
     Classification::assertClassified(fn (ClassificationPrompt $prompt): bool => $prompt->asks('is_spam')
@@ -64,7 +64,7 @@ it('keeps an entry below the spam threshold and alerts for it', function (): voi
 
     expect($entry->fresh())
         ->spam->toBeFalse()
-        ->spam_score->toEqual('0.600')
+        ->spam_score->toBe(0.6)
         ->spam_reason->toBeNull()
         ->spam_checked_at->toEqual(now());
     Queue::assertPushed(DeliverFormEntryAlert::class, 1);
@@ -96,7 +96,7 @@ it('leaves the entry as submitted and still alerts when classification is unavai
 
     expect($entry->fresh())
         ->spam->toBeFalse()
-        ->spam_score->toEqual('0.000')
+        ->spam_score->toBe(0.0)
         ->spam_reason->toBeNull()
         ->spam_checked_at->toBeNull();
     Queue::assertPushed(DeliverFormEntryAlert::class, 1);

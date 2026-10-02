@@ -94,7 +94,7 @@ it('exports entries as CSV with a column per schema field', function (): void {
     $rows = parseCsv($response->streamedContent());
 
     expect($rows[0])->toBe(['id', 'created_at', 'Name', 'Email', 'Message', 'read_at', 'starred', 'spam', 'spam_score', 'spam_reason', 'spam_checked_at', 'ip', 'referer', 'user_agent', 'deleted_at'])
-        ->and($rows[1])->toBe([$entry->id, '2026-01-02T03:04:05Z', 'Ada Lovelace', 'ada@example.com', "Hello,\n\"world\"", '', 'true', 'false', '0.250', '', '2026-01-02T03:04:06Z', '127.0.0.1', 'https://example.com/contact', 'Mozilla/5.0', ''])
+        ->and($rows[1])->toBe([$entry->id, '2026-01-02T03:04:05Z', 'Ada Lovelace', 'ada@example.com', "Hello,\n\"world\"", '', 'true', 'false', '0.25', '', '2026-01-02T03:04:06Z', '127.0.0.1', 'https://example.com/contact', 'Mozilla/5.0', ''])
         ->and($rows)->toHaveCount(2);
 });
 

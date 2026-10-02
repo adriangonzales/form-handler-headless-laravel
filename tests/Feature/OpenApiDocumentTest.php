@@ -6,7 +6,7 @@ use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
 
 beforeEach(function (): void {
-    $this->document = app(Generator::class)(Scramble::getGeneratorConfig(Scramble::DEFAULT_API));
+    $this->document = resolve(Generator::class)(Scramble::getGeneratorConfig(Scramble::DEFAULT_API));
 });
 
 it('documents the login access token as a string', function (): void {

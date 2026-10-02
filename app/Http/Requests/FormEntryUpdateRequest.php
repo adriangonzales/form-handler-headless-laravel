@@ -52,7 +52,8 @@ class FormEntryUpdateRequest extends FormRequest
             /** Recorded by the spam check. Rejected if sent. */
             'spam_checked_at' => ['missing'],
             'spam' => ['nullable', 'boolean'],
-            'spam_score' => ['sometimes', 'required', 'numeric', 'between:0,9.999'],
+            /** Rounded to two decimal places when stored. */
+            'spam_score' => ['sometimes', 'required', 'numeric', 'between:0,9.99'],
             'spam_reason' => ['nullable', 'string'],
             'starred' => ['sometimes', 'required', 'boolean'],
             'read_at' => ['nullable', 'date'],

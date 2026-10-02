@@ -526,7 +526,7 @@ it('updates only the fields sent in a partial update', function (): void {
     expect($entry->fresh())
         ->read_at->toEqual(now())
         ->starred->toBeTrue()
-        ->spam_score->toBe('0.500');
+        ->spam_score->toBe(0.5);
 });
 
 it('rejects a read_at that is not a date', function (): void {
@@ -540,17 +540,17 @@ it('rejects a read_at that is not a date', function (): void {
     $response->assertJsonValidationErrors('read_at');
 });
 
-it('keeps the stored precision of the spam score', function (): void {
+it('rounds the spam score to two decimal places', function (): void {
     $this->actingAs($this->user);
 
     $entry = FormEntry::factory()->create(['form_id' => $this->form->id]);
 
-    $response = $this->patchJson(route('entries.update', $entry), ['spam_score' => 0.125]);
+    $response = $this->patchJson(route('entries.update', $entry), ['spam_score' => 0.456]);
 
     $response->assertOk();
-    $response->assertJsonPath('data.spam_score', 0.125);
+    $response->assertJsonPath('data.spam_score', 0.46);
 
-    expect($entry->fresh()->spam_score)->toBe('0.125');
+    expect($entry->fresh()->spam_score)->toBe(0.46);
 });
 
 it('rejects a spam score outside the column range', function (float $score): void {

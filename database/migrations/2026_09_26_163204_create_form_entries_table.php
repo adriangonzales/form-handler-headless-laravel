@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('user_agent')->nullable();
             $table->string('user_agent_display')->nullable();
             $table->boolean('spam')->nullable();
-            $table->decimal('spam_score', 4, 3)->default(0);
+            $table->decimal('spam_score', 3, 2)->default(0);
             $table->string('spam_reason')->nullable();
             $table->timestamp('spam_checked_at')->nullable();
             $table->boolean('starred')->default(false);

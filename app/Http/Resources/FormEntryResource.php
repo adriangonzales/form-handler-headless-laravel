@@ -30,8 +30,8 @@ class FormEntryResource extends JsonResource
             'user_agent' => $this->user_agent,
             'user_agent_display' => $this->user_agent_display,
             'spam' => $this->spam,
-            /** Spam likelihood from 0 (not spam) to 1 (spam), to three decimal places. */
-            'spam_score' => (float) $this->spam_score,
+            /** Spam likelihood from 0 (not spam) to 1 (spam), to two decimal places. */
+            'spam_score' => $this->spam_score,
             'spam_reason' => $this->spam_reason,
             /**
              * When the entry's spam check finished: when it was created for honeypot hits and entries

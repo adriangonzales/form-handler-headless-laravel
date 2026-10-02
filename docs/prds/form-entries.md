@@ -32,7 +32,7 @@ Table `form_entries`:
 | `user_agent`                             | string, nullable       | Raw UA string                                 |
 | `user_agent_display`                     | JSON, nullable         | Parsed user agent (see FR-1a)                 |
 | `spam`                                   | boolean, nullable      | Model default `false`                         |
-| `spam_score`                             | decimal(4,3)           | Default `0`                                   |
+| `spam_score`                             | decimal(3,2)           | Default `0`. Rounded to 2 decimals when set   |
 | `spam_reason`                            | string, nullable       |                                               |
 | `spam_checked_at`                        | timestamp, nullable    | When the spam check finished (see FR-1, FR-1a) |
 | `starred`                                | boolean                | Default `false`                               |
@@ -61,7 +61,7 @@ The entry is created by the `App\Actions\FormEntries\CreateFormEntry` action, sh
 - Validation, stored `input`, metadata and the `FormEntryCreated` event are the same as FR-1. A `FormEntrySubmitted` event is also dispatched; its listeners parse the user agent and check for spam, and alerts follow the spam check ([Form Notifications](form-notifications.md)).
 - **User agent.** `ParseFormEntryUserAgent` uses `donatj/phpuseragentparser` to store `user_agent_display` as `{ "platform": ..., "browser": ..., "browser_version": ... }` (e.g. `Macintosh`, `Chrome`, `129.0.0.0`). Parts the parser cannot identify are `null`; an entry without a user agent keeps `user_agent_display: null`. The listener is queued, so the submission response usually has `user_agent_display: null`; it is filled in once a queue worker runs the listener, and skipped if the entry has been permanently deleted by then.
 - **Honeypot.** When `settings.honeypot_enabled` is true, the site's form should include a hidden input named `settings.honeypot_name` that people leave empty. If a submission gives it a non-empty value, it still gets the normal success response (so bots cannot tell) and is stored as usual, but with `spam: true` and `spam_reason: "Honeypot field was filled in."`, and `spam_checked_at` set to the creation time, so it is not sent to Jev and no alerts are sent. The honeypot value itself is not stored. Submissions that fail validation return 422 whether or not the honeypot is filled.
-- **Spam classification.** After a submission is stored, the queued `CheckFormEntryForSpam` listener asks Jev (TypeSafe, through `laravel/ai`) whether it is spam, sending the form name, referer and submitted input (truncated to 10,000 characters). Entries already flagged (e.g. by the honeypot) are skipped. The probability is stored in `spam_score`; at 0.9 or above the entry gets `spam: true` and `spam_reason: "Jev classified this entry as spam."`, otherwise `spam: false`; either way `spam_checked_at` records when. Until then `spam_checked_at` is `null`. Without `TYPESAFE_API_KEY`, or when the call fails (logged as a warning), the entry is left as submitted and `spam_checked_at` stays `null`. Either way the listener then fires `FormEntrySpamChecked`, which sends alerts.
+- **Spam classification.** After a submission is stored, the queued `CheckFormEntryForSpam` listener asks Jev (TypeSafe, through `laravel/ai`) whether it is spam, sending the form name, referer and submitted input (truncated to 10,000 characters). Entries already flagged (e.g. by the honeypot) are skipped. The probability is stored in `spam_score`, rounded to 2 decimal places; at 0.9 or above the entry gets `spam: true` and `spam_reason: "Jev classified this entry as spam."`, otherwise `spam: false`; either way `spam_checked_at` records when. Until then `spam_checked_at` is `null`. Without `TYPESAFE_API_KEY`, or when the call fails (logged as a warning), the entry is left as submitted and `spam_checked_at` stays `null`. Either way the listener then fires `FormEntrySpamChecked`, which sends alerts.
 - Responds `201` with `{ "data": { "redirect": ..., "message": ... } }` from the form's settings (each `null` when unset). Other settings (`domains`, `timezone`) are not exposed. The API never sends a 3XX: the client shows `message` and/or navigates to `redirect` itself.
 - Validation errors are always JSON (422), even for non-JSON requests.
 - Rate limited twice, each returning `429` when exceeded: 300 requests per minute per client IP across all forms (`throttle:300,1`), and 60 per minute to each form per client IP (the `form-submissions` limiter in `AppServiceProvider`, keyed by the form ID in the URL plus the IP), so one client cannot block a form for others. Rejected requests (403/404/422) count towards both limits.
@@ -79,17 +79,17 @@ Every endpoint in this PRD except the public submission (FR-1a) and the signed e
 
 | Field         | Rules                      |
 | ------------- | -------------------------- |
-| `spam_score`  | optional, numeric, 0–9.999 |
+| `spam_score`  | optional, numeric, 0–9.99  |
 | `starred`     | optional, boolean          |
 | `spam_reason` | nullable, string           |
 | `spam`        | nullable, boolean          |
 | `read_at`     | nullable, date             |
 
-Every field is optional, so a PATCH can change a single field (e.g. just `read_at`) and leaves the rest untouched; `spam_score` and `starred` cannot be set to `null`. The submission fields (`input`, `ip`, `ip_location_display`, `referer`, `user_agent`, `user_agent_display`) are recorded at submission time and are read-only: sending any of them, even as `null`, returns 422 on that field and nothing is changed. `spam_checked_at` is set by the spam check and is rejected the same way.
+Every field is optional, so a PATCH can change a single field (e.g. just `read_at`) and leaves the rest untouched; `spam_score` and `starred` cannot be set to `null`, and `spam_score` is rounded to 2 decimal places. The submission fields (`input`, `ip`, `ip_location_display`, `referer`, `user_agent`, `user_agent_display`) are recorded at submission time and are read-only: sending any of them, even as `null`, returns 422 on that field and nothing is changed. `spam_checked_at` is set by the spam check and is rejected the same way.
 
 Returns the refreshed entry. This is the mechanism for starring, marking read/unread, and flagging spam.
 
-**FR-5 Response shape.** Entries are returned as `{ "data": { id, form_id, input, ip, ip_location_display, referer, user_agent, user_agent_display, spam, spam_score, spam_reason, spam_checked_at, starred, read_at, created_at, updated_at, deleted_at } }`, wrapped in `data` like forms and notifications. The submitted values are under `data.input`. `user_agent_display` is an object (see FR-1a) or `null`. `spam_score` is serialised as a number, rounded to the column's 3 decimals (e.g. `0.125`). `spam_checked_at`, `read_at`, `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` unless the entry was listed or exported with `filter[trashed]`.
+**FR-5 Response shape.** Entries are returned as `{ "data": { id, form_id, input, ip, ip_location_display, referer, user_agent, user_agent_display, spam, spam_score, spam_reason, spam_checked_at, starred, read_at, created_at, updated_at, deleted_at } }`, wrapped in `data` like forms and notifications. The submitted values are under `data.input`. `user_agent_display` is an object (see FR-1a) or `null`. `spam_score` is serialised as a number with at most 2 decimal places (e.g. `0.97`). `spam_checked_at`, `read_at`, `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` unless the entry was listed or exported with `filter[trashed]`.
 
 **FR-6 Delete, restore and permanently delete an entry.**
 
@@ -112,7 +112,7 @@ Returns the refreshed entry. This is the mechanism for starring, marking read/un
 - Exports are kept for 24 hours after they are requested (`expires_at`). An hourly `model:prune` deletes expired exports and their files; after that the export returns 404. Files are written to the default filesystem disk, which is private.
 - The entries included are those matching the filters when the job runs, not when the export was requested.
 - Columns: `id`, `created_at`, one column per schema field, sorted by `order`, headed by its label (falling back to the field's name), then one column per input key stored on the exported entries that the current schema no longer has (e.g. a removed or renamed field), headed by the stored key and sorted alphabetically, then `read_at`, `starred`, `spam`, `spam_score`, `spam_reason`, `spam_checked_at`, `ip`, `referer`, `user_agent`, `deleted_at`.
-- Dates are ISO 8601 UTC (`2026-01-02T03:04:05Z`); booleans are `true`/`false`; missing values are empty. List values (e.g. checkboxes) are joined with `, `; other structured values are JSON.
+- Dates are ISO 8601 UTC (`2026-01-02T03:04:05Z`); booleans are `true`/`false`; `spam_score` is written as in the API (e.g. `0.25`); missing values are empty. List values (e.g. checkboxes) are joined with `, `; other structured values are JSON.
 - Cells starting with `=`, `+`, `-`, `@`, tab or carriage return are prefixed with `'` so spreadsheet applications do not evaluate submitter input as formulas.
 
 ## 6. Gaps

@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\CarbonImmutable;
 use Database\Factories\FormEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * @property array<string, mixed>|null $input
  * @property array{platform: string|null, browser: string|null, browser_version: string|null}|null $user_agent_display
+ * @property float $spam_score
  * @property CarbonImmutable|null $spam_checked_at
  * @property CarbonImmutable|null $read_at
  */
@@ -51,7 +53,6 @@ class FormEntry extends Model
             'input' => 'array',
             'user_agent_display' => 'array',
             'spam' => 'boolean',
-            'spam_score' => 'decimal:3',
             'spam_checked_at' => 'datetime',
             'starred' => 'boolean',
             'read_at' => 'datetime',
@@ -68,6 +69,19 @@ class FormEntry extends Model
         'spam_score' => 0,
         'starred' => 0,
     ];
+
+    /**
+     * The spam likelihood as a float with two decimal places, rounded when set to match the column.
+     *
+     * @return Attribute<float, float|int|string>
+     */
+    protected function spamScore(): Attribute
+    {
+        return Attribute::make(
+            get: fn (mixed $value): float => (float) $value,
+            set: fn (float|int|string $value): float => round((float) $value, 2),
+        );
+    }
 
     /**
      * @return BelongsTo<Form, $this>
