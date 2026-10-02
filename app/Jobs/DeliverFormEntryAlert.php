@@ -39,11 +39,11 @@ class DeliverFormEntryAlert implements ShouldQueue
 
     /**
      * Email the entry to the recipient, and clear any error left by an earlier failed delivery. A recipient
-     * that was disabled or deleted, or an entry that was deleted, since the alert was queued is skipped.
+     * that was disabled or deleted, or an entry or form that was deleted, since the alert was queued is skipped.
      */
     public function handle(): void
     {
-        if (! $this->recipient->enabled || $this->recipient->trashed() || $this->entry->trashed()) {
+        if (! $this->recipient->enabled || $this->recipient->trashed() || $this->entry->trashed() || $this->entry->form === null) {
             return;
         }
 

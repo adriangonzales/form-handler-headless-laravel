@@ -51,6 +51,17 @@ it('does not alert for entries flagged as spam', function (): void {
     Queue::assertNotPushed(DeliverFormEntryAlert::class);
 });
 
+it('does not alert for entries whose form was deleted', function (): void {
+    Queue::fake();
+    FormNotification::factory()->create(['form_id' => $this->form->id, 'type' => 'email', 'enabled' => true]);
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'spam' => false]);
+    $this->form->delete();
+
+    event(new FormEntrySpamChecked($entry));
+
+    Queue::assertNotPushed(DeliverFormEntryAlert::class);
+});
+
 it('emails the submitted values to the recipient', function (): void {
     Mail::fake();
     $recipient = FormNotification::factory()->create(['form_id' => $this->form->id, 'type' => 'email', 'enabled' => true, 'value' => 'alerts@example.com']);
@@ -150,9 +161,10 @@ it('skips a recipient that was disabled or deleted after the alert was queued', 
         'disabled' => $recipient->update(['enabled' => false]),
         'deleted' => $recipient->delete(),
         'entry deleted' => $entry->delete(),
+        'form deleted' => $this->form->delete(),
     };
 
     dispatch_sync(new DeliverFormEntryAlert($recipient->fresh() ?? FormNotification::withTrashed()->find($recipient->id), $entry));
 
     Mail::assertNothingSent();
-})->with(['disabled', 'deleted', 'entry deleted']);
+})->with(['disabled', 'deleted', 'entry deleted', 'form deleted']);

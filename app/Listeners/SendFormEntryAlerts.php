@@ -10,17 +10,20 @@ class SendFormEntryAlerts
 {
     /**
      * Queue an alert to each enabled email recipient of the entry's form once its spam check is done.
-     * Entries flagged as spam are not alerted. SMS recipients are skipped until an SMS channel exists.
+     * Entries flagged as spam, or whose form was deleted, are not alerted. SMS recipients are skipped
+     * until an SMS channel exists.
      */
     public function handle(FormEntrySpamChecked $event): void
     {
         $entry = $event->formEntry;
 
-        if ($entry->spam === true) {
+        $form = $entry->form;
+
+        if ($entry->spam === true || $form === null) {
             return;
         }
 
-        $entry->form->notifications()
+        $form->notifications()
             ->where('enabled', true)
             ->where('type', 'email')
             ->each(fn (FormNotification $recipient) => dispatch(new DeliverFormEntryAlert($recipient, $entry)));
