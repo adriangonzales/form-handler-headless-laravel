@@ -139,7 +139,7 @@ it('creates a new form entry', function (): void {
             'user_agent' => 'Symfony',
             'user_agent_display' => null,
             'spam' => false,
-            'spam_score' => '0.000',
+            'spam_score' => 0.0,
             'spam_reason' => null,
             'spam_checked_at' => '2026-01-02T03:04:05.000000Z',
             'starred' => false,
@@ -288,8 +288,8 @@ it('sorts the entry index by spam_score', function (string $sort, array $expecte
 
     expect($response->json('data.*.spam_score'))->toBe($expectedScores);
 })->with([
-    'ascending' => ['spam_score', ['0.100', '0.500', '0.900']],
-    'descending' => ['-spam_score', ['0.900', '0.500', '0.100']],
+    'ascending' => ['spam_score', [0.1, 0.5, 0.9]],
+    'descending' => ['-spam_score', [0.9, 0.5, 0.1]],
 ]);
 
 it('filters the entry index by read state', function (string $value, bool $expectRead): void {
@@ -548,7 +548,7 @@ it('keeps the stored precision of the spam score', function (): void {
     $response = $this->patchJson(route('entries.update', $entry), ['spam_score' => 0.125]);
 
     $response->assertOk();
-    $response->assertJsonPath('data.spam_score', '0.125');
+    $response->assertJsonPath('data.spam_score', 0.125);
 
     expect($entry->fresh()->spam_score)->toBe('0.125');
 });

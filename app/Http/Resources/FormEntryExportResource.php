@@ -25,6 +25,11 @@ class FormEntryExportResource extends JsonResource
             'id' => $this->id,
             'form_id' => $this->form_id,
             'status' => $this->status,
+            /**
+             * The entry filters and sort the export was created with.
+             *
+             * @var array{sort?: string, filter?: array<string, string>}
+             */
             'parameters' => (object) $this->parameters,
             'filename' => $this->filename,
             'row_count' => $this->row_count,

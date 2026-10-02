@@ -89,7 +89,7 @@ Every field is optional, so a PATCH can change a single field (e.g. just `read_a
 
 Returns the refreshed entry. This is the mechanism for starring, marking read/unread, and flagging spam.
 
-**FR-5 Response shape.** Entries are returned as `{ "data": { id, form_id, input, ip, ip_location_display, referer, user_agent, user_agent_display, spam, spam_score, spam_reason, spam_checked_at, starred, read_at, created_at, updated_at, deleted_at } }`, wrapped in `data` like forms and notifications. The submitted values are under `data.input`. `user_agent_display` is an object (see FR-1a) or `null`. `spam_score` is serialised as a string with 3 decimals, matching the column (e.g. `"0.125"`). `spam_checked_at`, `read_at`, `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` unless the entry was listed or exported with `filter[trashed]`.
+**FR-5 Response shape.** Entries are returned as `{ "data": { id, form_id, input, ip, ip_location_display, referer, user_agent, user_agent_display, spam, spam_score, spam_reason, spam_checked_at, starred, read_at, created_at, updated_at, deleted_at } }`, wrapped in `data` like forms and notifications. The submitted values are under `data.input`. `user_agent_display` is an object (see FR-1a) or `null`. `spam_score` is serialised as a number, rounded to the column's 3 decimals (e.g. `0.125`). `spam_checked_at`, `read_at`, `created_at`, `updated_at` and `deleted_at` are ISO 8601 UTC strings with microseconds (e.g. `2026-01-02T03:04:05.000000Z`); `deleted_at` is `null` unless the entry was listed or exported with `filter[trashed]`.
 
 **FR-6 Delete, restore and permanently delete an entry.**
 

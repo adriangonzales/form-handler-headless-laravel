@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\OpenApi\ArrayKeysRuleTransformer;
 use Carbon\CarbonImmutable;
+use Dedoc\Scramble\Scramble;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -31,6 +33,15 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configurePasswordResetUrl();
         $this->configureRateLimiting();
+        $this->configureApiDocs();
+    }
+
+    /**
+     * Correct how the OpenAPI document describes some validation rules.
+     */
+    protected function configureApiDocs(): void
+    {
+        Scramble::configure()->withRuleTransformers(ArrayKeysRuleTransformer::class);
     }
 
     /**

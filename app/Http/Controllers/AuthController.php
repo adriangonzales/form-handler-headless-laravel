@@ -86,6 +86,7 @@ class AuthController extends Controller
     private function tokenResponse(string $token): JsonResponse
     {
         return response()->json([
+            /** @var string */
             'access_token' => $token,
             'token_type' => 'bearer',
             'expires_in' => $this->guard()->factory()->getTTL() * 60,
