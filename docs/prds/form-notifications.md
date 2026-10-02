@@ -61,7 +61,7 @@ Responds `201` with the recipient resource.
 
 **FR-6 Alert on new entries.** Once a public submission's spam check is done (`FormEntrySpamChecked`, see Form Entries FR-1a), the `SendFormEntryAlerts` listener queues one `DeliverFormEntryAlert` job per recipient of that form that is enabled, not deleted and of type `email`. Entries flagged as spam, and entries created through the authenticated API, are not alerted. SMS recipients are skipped (see Gaps).
 
-**FR-7 Alert email.** The `NewFormEntry` mailable is sent to the recipient's address with the subject `New entry: {form name}`. It lists the submission time and each schema field's label with the submitted value (`—` when empty; lists joined with `, `), as HTML and plain text. Values are HTML-escaped and never rendered as Markdown, so submitted content cannot inject links or markup.
+**FR-7 Alert email.** The `NewFormEntry` mailable is sent to the recipient's address with the subject `New entry: {form name}`. It lists the submission time and each schema field's label (sorted by `order`) with the submitted value (`—` when empty; lists joined with `, `), as HTML and plain text. Values are HTML-escaped and never rendered as Markdown, so submitted content cannot inject links or markup.
 
 The submission time is shown in UTC (e.g. `Sat, Jan 3, 2026 3:04 AM UTC`). When the form's `settings.timezone` is set to anything other than `UTC`, the time in that timezone is shown first, bolded in HTML, with the UTC time after it in brackets (e.g. **Fri, Jan 2, 2026 9:04 PM CST** (Sat, Jan 3, 2026 3:04 AM UTC)). The abbreviation comes from the timezone database, so some zones show an offset such as `+04` instead.
 
