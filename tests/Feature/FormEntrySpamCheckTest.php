@@ -85,20 +85,26 @@ it('does not classify an entry already flagged as spam', function (): void {
     Queue::assertNotPushed(DeliverFormEntryAlert::class);
 });
 
-it('leaves the entry as submitted and still alerts when classification is unavailable due to missing API key', function (): void {
+it('logs the error, records the check and still alerts when the API key is missing', function (): void {
     Queue::fake([DeliverFormEntryAlert::class]);
+    Log::spy();
     config(['ai.providers.typesafe.key' => null]);
     Classification::fake();
-
-    $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'spam' => false, 'spam_score' => 0, 'spam_reason' => null, 'spam_checked_at' => null]);
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'spam' => false, 'spam_score' => 0.5, 'spam_reason' => null, 'spam_checked_at' => null]);
+    $this->freezeSecond();
 
     event(new FormEntrySubmitted($entry));
 
+    Classification::assertNothingClassified();
+    Log::shouldHaveReceived('warning')->once()->with('Could not classify a form entry for spam.', [
+        'form_entry_id' => $entry->id,
+        'error' => 'Jev is not configured.',
+    ]);
     expect($entry->fresh())
         ->spam->toBeFalse()
         ->spam_score->toBe(0.0)
         ->spam_reason->toBeNull()
-        ->spam_checked_at->toBeNull();
+        ->spam_checked_at->toEqual(now());
     Queue::assertPushed(DeliverFormEntryAlert::class, 1);
 });
 
@@ -112,6 +118,37 @@ it('logs a failed classification', function (): void {
 
     Log::shouldHaveReceived('warning')->once()->with('Could not classify a form entry for spam.', [
         'form_entry_id' => $entry->id,
-        'error' => 'Connection timed out',
+        'error' => 'Jev error: Connection timed out',
     ]);
+});
+
+it('logs an unexpected error as an error, records the check and still alerts', function (): void {
+    Queue::fake([DeliverFormEntryAlert::class]);
+    Log::spy();
+    Classification::fake([['is_spam' => new BooleanAnswer(0.2)]]);
+    $entry = FormEntry::factory()->create(['form_id' => $this->form->id, 'spam' => false, 'spam_score' => 0.5, 'spam_reason' => null, 'spam_checked_at' => null]);
+    $hasFailed = false;
+    FormEntry::updating(function (FormEntry $updatedEntry) use (&$hasFailed): void {
+        if (! $hasFailed && $updatedEntry->isDirty('spam_checked_at')) {
+            $hasFailed = true;
+
+            throw new RuntimeException('Deadlock found');
+        }
+    });
+    $this->freezeSecond();
+
+    event(new FormEntrySubmitted($entry));
+
+    Log::shouldHaveReceived('error')->once()->with('Could not classify a form entry for spam.', [
+        'form_entry_id' => $entry->id,
+        'type' => RuntimeException::class,
+        'error' => 'Deadlock found',
+    ]);
+    Log::shouldNotHaveReceived('warning');
+    expect($entry->fresh())
+        ->spam->toBeFalse()
+        ->spam_score->toBe(0.0)
+        ->spam_reason->toBe('Unknown error')
+        ->spam_checked_at->toEqual(now());
+    Queue::assertPushed(DeliverFormEntryAlert::class, 1);
 });

@@ -7,6 +7,8 @@ use App\Models\Form;
 use App\Models\FormNotification;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use Laravel\Ai\Classification;
+use Laravel\Ai\Responses\Data\BooleanAnswer;
 
 it('accepts a submission without authentication and responds with the redirect and message', function (): void {
     Event::fake();
@@ -93,14 +95,18 @@ it('stores a submission that fills in the honeypot as spam without alerting', fu
 });
 
 it('accepts a submission as not spam when the honeypot is empty or disabled', function (array $settings, array $extraInput): void {
+    config(['ai.providers.typesafe.key' => 'test-key']);
+    Classification::fake([['is_spam' => new BooleanAnswer(0)]])->preventStrayClassifications();
     $form = Form::factory()->active()->create(['settings' => $settings]);
+    $this->freezeSecond();
 
     $this->postJson(route('forms.submissions.store', $form), $extraInput)->assertCreated();
 
     $entry = $form->entries()->sole();
     expect($entry->spam)->toBeFalse();
+    expect($entry->spam_score)->toBe(0.0);
     expect($entry->spam_reason)->toBeNull();
-    expect($entry->spam_checked_at)->toBeNull();
+    expect($entry->spam_checked_at)->toEqual(now());
 })->with([
     'honeypot left empty' => [['honeypot_enabled' => true, 'honeypot_name' => 'website'], ['website' => '']],
     'honeypot omitted' => [['honeypot_enabled' => true, 'honeypot_name' => 'website'], []],

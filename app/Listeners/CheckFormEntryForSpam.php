@@ -6,6 +6,9 @@ namespace App\Listeners;
 
 use App\Events\FormEntrySpamChecked;
 use App\Events\FormEntrySubmitted;
+use App\Exceptions\SpamClassificationFailedException;
+use App\Exceptions\SpamClassifierNotConfiguredException;
+use App\Exceptions\UnexpectedSpamClassificationException;
 use App\Models\FormEntry;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
@@ -32,24 +35,55 @@ class CheckFormEntryForSpam implements ShouldQueue
     /**
      * Ask Jev whether an entry not already flagged as spam is spam, store the verdict and its
      * probability with the time it was checked, then announce that the spam check is done. Without a
-     * TypeSafe API key, or when the call fails, the entry is left as submitted, with no
-     * `spam_checked_at`, so its alerts are still sent.
+     * TypeSafe API key, or when the call fails, the failure is logged and the entry is recorded as
+     * checked and not spam, with the failure as its `spam_reason`, so its alerts are still sent.
      */
     public function handle(FormEntrySubmitted $event): void
     {
         $entry = $event->formEntry;
 
-        if ($entry->spam !== true) {
-            $this->classify($entry);
+        try {
+            if ($entry->spam !== true) {
+                $this->classify($entry);
+            }
+        } catch (SpamClassifierNotConfiguredException|SpamClassificationFailedException|UnexpectedSpamClassificationException $throwable) {
+            Log::warning('Could not classify a form entry for spam.', [
+                'form_entry_id' => $entry->id,
+                'error' => $throwable->getMessage(),
+            ]);
+
+            $entry->update([
+                'spam' => 0,
+                'spam_score' => 0,
+                'spam_checked_at' => now(),
+            ]);
+        } catch (Throwable $throwable) {
+            Log::error('Could not classify a form entry for spam.', [
+                'form_entry_id' => $entry->id,
+                'type' => get_class($throwable),
+                'error' => $throwable->getMessage(),
+            ]);
+
+            $entry->update([
+                'spam' => 0,
+                'spam_score' => 0,
+                'spam_reason' => 'Unknown error',
+                'spam_checked_at' => now(),
+            ]);
         }
 
         event(new FormEntrySpamChecked($entry));
     }
 
+    /**
+     * @throws SpamClassifierNotConfiguredException
+     * @throws SpamClassificationFailedException
+     * @throws UnexpectedSpamClassificationException
+     */
     private function classify(FormEntry $entry): void
     {
         if (blank(config('ai.providers.typesafe.key'))) {
-            return;
+            throw new SpamClassifierNotConfiguredException;
         }
 
         try {
@@ -69,16 +103,11 @@ class CheckFormEntryForSpam implements ShouldQueue
                 ->classify()
                 ->answer('is_spam');
         } catch (Throwable $throwable) {
-            Log::warning('Could not classify a form entry for spam.', [
-                'form_entry_id' => $entry->id,
-                'error' => $throwable->getMessage(),
-            ]);
-
-            return;
+            throw new SpamClassificationFailedException($throwable);
         }
 
         if (! $answer instanceof BooleanAnswer) {
-            return;
+            throw new UnexpectedSpamClassificationException;
         }
 
         $isSpam = $answer->isTrue(self::THRESHOLD);
